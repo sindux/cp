@@ -1,3 +1,4 @@
+"""
 from collections import defaultdict, deque
 
 def Trie():
@@ -57,4 +58,33 @@ def trie_gets(trie, prefix='', sort=False, terminator='  '):
 #             for sub,vv in sorted(v.items()):
 #                 q.append((k+sub, vv if sub!=terminator else terminator))
 
+"""        
+
+class Trie:
+    def __init__(self):
+        self.t = {}
+
+    def insert(self, word: str) -> None:
+        d = self.t
+        for w in word:
+            n = d.get(w, {})
+            d[w]=n
+            d=n
+        d['EOW']=True
+
+    def search(self, word: str) -> bool:
+        d = self.t
+        for w in word:
+            d = d.get(w)
+            if not d: return False
+        return 'EOW' in d
+        
+
+    def startsWith(self, prefix: str) -> bool:
+        d = self.t
+        for w in prefix:
+            d = d.get(w)
+            if not d: return False
+        return d is not None
+            
         
