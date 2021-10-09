@@ -59,32 +59,39 @@ def trie_gets(trie, prefix='', sort=False, terminator='  '):
 #                 q.append((k+sub, vv if sub!=terminator else terminator))
 
 """        
+class TrieNode(dict):
+    def __init__(self):
+        self.isWord=False
+    def __repr__(self):
+        return super().__repr__() + ('*' if self.isWord else '')
 
 class Trie:
     def __init__(self):
-        self.t = {}
+        self.t = TrieNode()
 
-    def insert(self, word: str) -> None:
-        d = self.t
+    def insert(self, word: str, node: TrieNode=None) -> None:
+        d = self.t if node is None else node
         for w in word:
-            n = d.get(w, {})
+            n = d.get(w)
+            if n is None: n=TrieNode()
             d[w]=n
             d=n
-        d['EOW']=True
+        d.isWord=True
+        return d
 
     def search(self, word: str) -> bool:
         d = self.t
         for w in word:
             d = d.get(w)
-            if not d: return False
-        return 'EOW' in d
+            if d is None: return False
+        return d.isWord
         
 
     def startsWith(self, prefix: str) -> bool:
         d = self.t
         for w in prefix:
             d = d.get(w)
-            if not d: return False
+            if d is None: return False
         return d is not None
             
         
