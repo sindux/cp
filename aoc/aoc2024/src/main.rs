@@ -18,6 +18,7 @@ fn main() {
         "1a" => d1a(input),
         "1b" => d1b(input),
         "2a" => d2a(input),
+        "2b" => d2b(input),
         _ => "Unknown day".to_string()
     };
     println!("{res}");

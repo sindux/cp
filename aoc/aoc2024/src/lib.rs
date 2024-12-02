@@ -27,23 +27,44 @@ pub fn d1b(input: Vec<String>) -> String {
     s.to_string()
 }
 
-pub fn d2a(input: Vec<String>) -> String {
+fn d2_is_safe(levels: &Vec<i32>) -> bool {
     fn is_diff_ok(first_diff: i32, cur_diff: i32) -> bool {
         let ca = cur_diff.abs();
         ca>=1 && ca<=3 && first_diff.signum() == cur_diff.signum()
     }
-    fn is_safe(level: &str) -> bool {
-        let levels: Vec<i32> = level.split_ascii_whitespace().map(|n|n.parse().unwrap()).collect();
-        let first_diff = levels[1]-levels[0];
-        for i in 1..levels.len() {
-            let cur_diff = levels[i] - levels[i-1];
-            if !is_diff_ok(first_diff, cur_diff) {
-                return false
+    let first_diff = levels[1]-levels[0];
+    for i in 1..levels.len() {
+        let cur_diff = levels[i] - levels[i-1];
+        if !is_diff_ok(first_diff, cur_diff) {
+            return false
+        }
+    }
+    true
+}
+
+fn _s2vi(input: &str) -> Vec<i32> {
+    input.split_ascii_whitespace().map(|n| n.parse().unwrap()).collect()
+}
+
+pub fn d2a(input: Vec<String>) -> String {
+    input.into_iter().filter(|l| d2_is_safe(&_s2vi(l))).count().to_string()
+}
+
+pub fn d2b(input: Vec<String>) -> String {
+    input.into_iter().filter(|l| {
+        let level = _s2vi(l);
+        if d2_is_safe(&level) {
+            return true
+        }
+        for try_remove in 0..level.len() {
+            let mut levelclone = level.clone();
+            levelclone.remove(try_remove);
+            if d2_is_safe(&levelclone) {
+                return true
             }
         }
-        true
-    }
-    input.into_iter().filter(|l| is_safe(l)).count().to_string()
+        false
+    }).count().to_string()
 }
 
 #[cfg(test)]
