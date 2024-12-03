@@ -76,6 +76,26 @@ pub fn d3a(input: Vec<String>) -> String {
         .sum::<i32>().to_string()
 }
 
+
+pub fn d3b(input: Vec<String>) -> String {
+    let re = Regex::new(r"mul\((\d+),(\d+)\)|do\(\)|don't\(\)").unwrap();
+    let mut enable = true;
+    let mut ans = 0;
+    for c in re.captures_iter(&input.join("")) {
+        let c0 = c.get(0).unwrap().as_str();
+        if c0 == r"do()" {
+            enable = true;
+        } else if c0 == r"don't()" {
+            enable = false
+        } else if enable {
+            let (i,j) = (c.get(1).unwrap(), c.get(2).unwrap());
+            ans += i.as_str().parse::<i32>().unwrap() * j.as_str().parse::<i32>().unwrap();
+        }
+    }
+
+    ans.to_string()
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
