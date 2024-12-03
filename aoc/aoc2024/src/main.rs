@@ -15,11 +15,12 @@ fn main() {
     let (day, in_file) = (args.next().expect("Arg 1 is day"), args.next().expect("Arg 2 is file name"));
     let input = read(in_file);
     let res = match day.as_str() {
-        "1a" => d1a(input),
-        "1b" => d1b(input),
-        "2a" => d2a(input),
-        "2b" => d2b(input),
-        _ => "Unknown day".to_string()
+        "1a" => d1a,
+        "1b" => d1b,
+        "2a" => d2a,
+        "2b" => d2b,
+        "3a" => d3a,
+        _ => panic!("Unknown day")
     };
-    println!("{res}");
+    println!("{}", res(input));
 }

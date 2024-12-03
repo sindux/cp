@@ -1,6 +1,8 @@
 
 use std::collections::HashMap;
 
+use regex::Regex;
+
 fn parsed1(input: Vec<String>) -> (Vec<i32>, Vec<i32>) {
     let input: Vec<(i32, i32)> = input.into_iter().map(|l|{
         let l:  Vec<i32> = l.split_ascii_whitespace().map(|n|n.parse().unwrap()).collect();
@@ -65,6 +67,13 @@ pub fn d2b(input: Vec<String>) -> String {
         }
         false
     }).count().to_string()
+}
+
+pub fn d3a(input: Vec<String>) -> String {
+    let re = Regex::new(r"mul\((\d+),(\d+)\)").unwrap();
+    re.captures_iter(&input.join("")).map(|c|c.extract())
+        .map(|(_, [i,j])| i.parse::<i32>().unwrap() * j.parse::<i32>().unwrap() )
+        .sum::<i32>().to_string()
 }
 
 #[cfg(test)]
