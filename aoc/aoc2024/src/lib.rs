@@ -96,29 +96,48 @@ pub fn d3b(input: Vec<String>) -> String {
     ans.to_string()
 }
 
-pub fn d4a(input: Vec<String>) -> String {
-    fn find(input: &[String], mut y: usize, mut x: usize, dy: i32, dx: i32, tofind: &str) -> i32 {
-        let h = input.len();
-        let w = input[0].len();
-        let end_y = y as i32 + dy*tofind.len() as i32;
-        if end_y < -1 || end_y > h as i32 { return 0 }  
-        let end_x = x as i32 + dx*tofind.len() as i32;
-        if end_x < -1 || end_x > w as i32 { return 0 }
-        let mut tofind = tofind.as_bytes().iter().peekable();
-        while tofind.peek().is_some_and(|&&ch|ch==input[y].as_bytes()[x]) {
-            tofind.next();
-            y=(y as i32 + dy) as usize;
-            x=(x as i32 + dx) as usize;
-        }
-        if tofind.peek().is_none() { 1 } else {0}
+fn d4find(input: &[String], mut y: usize, mut x: usize, dy: i32, dx: i32, tofind: &str) -> i32 {
+    let h = input.len();
+    let w = input[0].len();
+    let end_y = y as i32 + dy*tofind.len() as i32;
+    if end_y < -1 || end_y > h as i32 { return 0 }  
+    let end_x = x as i32 + dx*tofind.len() as i32;
+    if end_x < -1 || end_x > w as i32 { return 0 }
+    let mut tofind = tofind.as_bytes().iter().peekable();
+    while tofind.peek().is_some_and(|&&ch|ch==input[y].as_bytes()[x]) {
+        tofind.next();
+        y=(y as i32 + dy) as usize;
+        x=(x as i32 + dx) as usize;
     }
+    if tofind.peek().is_none() { 1 } else {0}
+}
 
+pub fn d4a(input: Vec<String>) -> String {
     let mut ans=0;
     for y in 0..input.len() {
         for x in 0..input[y].len() {
             for dy in -1..=1 {
                 for dx in -1..=1 {
-                    ans += find(&input, y, x, dy, dx, "XMAS");
+                    ans += d4find(&input, y, x, dy, dx, "XMAS");
+                }
+            }
+        }
+    }
+    ans.to_string()
+}
+
+pub fn d4b(input: Vec<String>) -> String {
+    let mut ans = 0;
+    for y in 0..input.len() {
+        for x in 0..input[y].len() {
+            for w in ["MAS", "SAM"] {
+                if d4find(&input, y, x, 1, 1, w)>0 {
+                    // flip vert or horz
+                    if d4find(&input, y, x+2, 1, -1, w)>0 ||
+                       d4find(&input, y+2, x, -1, 1, w)>0
+                    {
+                        ans+=1;
+                    }
                 }
             }
         }

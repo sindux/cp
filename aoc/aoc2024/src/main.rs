@@ -22,6 +22,7 @@ fn main() {
         "3a" => d3a,
         "3b" => d3b,
         "4a" => d4a,
+        "4b" => d4b,
         _ => panic!("Unknown day")
     };
     println!("{}", res(input));
