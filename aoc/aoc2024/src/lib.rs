@@ -1,5 +1,5 @@
 
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
 use regex::Regex;
 
@@ -140,6 +140,60 @@ pub fn d4b(input: Vec<String>) -> String {
                     }
                 }
             }
+        }
+    }
+    ans.to_string()
+}
+
+fn parsed5(input: Vec<String>) -> (HashMap<i32, HashSet<i32>>, Vec<Vec<i32>>) {
+    let mut edges: HashMap<i32, HashSet<i32>> = HashMap::new();
+    let mut updates = vec![];
+    let mut sect1 = true;
+    for line in input {
+        if line.is_empty() {
+            sect1 = false;
+            continue;
+        }
+        if sect1 {
+            let from_to: Vec<i32> = line.split('|').map(|s|s.parse().unwrap()).collect();
+            edges.entry(from_to[0]).or_default().insert(from_to[1]);
+        } else {
+            let ns: Vec<i32> = line.split(',').map(|s|s.parse().unwrap()).collect();
+            updates.push(ns);
+        }
+    }
+    (edges, updates)
+
+}
+
+pub fn d5a(input: Vec<String>) -> String {
+    let (edges, updates) = parsed5(input);
+    let mut ans = 0;
+    for update in updates {
+        let mut is_valid = true;
+        for i in 0..update.len()-1 {
+            for j in i+1..update.len() {
+                let from = update[i];
+                let to = update[j];
+                if let Some(tos) = edges.get(&from) {
+                    if !tos.contains(&to) {
+                        is_valid = false;
+                        break
+                    }
+                }
+                if let Some(tos) = edges.get(&to) {
+                    if tos.contains(&from) {
+                        is_valid = false;
+                        break
+                    }
+                }
+            }
+            if !is_valid { break }
+        }
+        if is_valid {
+            let mid = update.len()/2;
+//            println!("{update:?} {mid} {}", update[mid]);
+            ans+=update[mid];
         }
     }
     ans.to_string()
