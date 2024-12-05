@@ -1,5 +1,5 @@
 
-use std::collections::{HashMap, HashSet};
+use std::{cmp::Ordering, collections::{HashMap, HashSet}};
 
 use regex::Regex;
 
@@ -192,8 +192,32 @@ pub fn d5a(input: Vec<String>) -> String {
         }
         if is_valid {
             let mid = update.len()/2;
-//            println!("{update:?} {mid} {}", update[mid]);
             ans+=update[mid];
+        }
+    }
+    ans.to_string()
+}
+
+pub fn d5b(input: Vec<String>) -> String {
+    let (edges, updates) = parsed5(input);
+    let mut ans = 0;
+    for update in &updates {
+        let mut sortedupd = update.clone();
+        sortedupd.sort_unstable_by(|a,b| {
+            if let Some(tos) = edges.get(a) {
+                if tos.contains(b) {
+                    return Ordering::Less
+                }
+            }
+            if let Some(tos) = edges.get(b) {
+                if tos.contains(a) {
+                    return Ordering::Greater
+                }
+            }
+            panic!("Can't find both {a} {b} {updates:?}");
+        });
+        if update.iter().zip(&sortedupd).any(|(a,b)|*a!=*b) {
+            ans += sortedupd[sortedupd.len()/2];
         }
     }
     ans.to_string()
