@@ -298,21 +298,22 @@ fn parsed7(input: Vec<String>) -> Vec<(i64, Vec<i64>)> {
     }).collect()
 }
 
-fn d7canequal(target: i64, nums: &[i64], idx: usize, total: i64) -> bool {
+fn d7canequal(target: i64, nums: &[i64], idx: usize, total: i64, can_concat: bool) -> bool {
     if idx >= nums.len() {
         return total == target
     }
     if total > target {
         return false
     }
-    d7canequal(target, nums, idx+1, total+nums[idx]) ||
-    d7canequal(target, nums, idx+1, (if idx==0 {1 } else {total})*nums[idx])
+    d7canequal(target, nums, idx+1, total+nums[idx], can_concat) ||
+    d7canequal(target, nums, idx+1, (if idx==0 {1 } else {total})*nums[idx], can_concat) ||
+    can_concat && d7canequal(target, nums, idx+1, total*10i64.pow(nums[idx].to_string().len() as u32) + nums[idx], can_concat)
 }
 
 pub fn d7a(input: Vec<String>) -> String {
     let input = parsed7(input);
     let ans: i64 = input.into_par_iter().filter_map(|i| {
-        if d7canequal(i.0, &i.1, 0, 0) {
+        if d7canequal(i.0, &i.1, 0, 0, false) {
             Some(i.0)
         }
         else { None }
@@ -320,6 +321,16 @@ pub fn d7a(input: Vec<String>) -> String {
     ans.to_string()
 }
 
+pub fn d7b(input: Vec<String>) -> String {
+
+    let input = parsed7(input);
+    let ans: i64 = input.into_par_iter().filter_map(|i| {
+        if d7canequal(i.0, &i.1, 0, 0, true) {
+            Some(i.0)
+        }
+        else { None }
+    }).sum();
+    ans.to_string()}
 
 #[cfg(test)]
 mod tests {
