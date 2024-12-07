@@ -290,6 +290,36 @@ pub fn d6b(input: Vec<String>) -> String {
     ans.to_string()
 }
 
+fn parsed7(input: Vec<String>) -> Vec<(i64, Vec<i64>)> {
+    input.into_iter().map(|l| {
+        let mut fs = l.split(&[':', ' ']);
+        (fs.next().unwrap().parse::<i64>().unwrap(), 
+        fs.skip(1).map(|c|c.parse::<i64>().unwrap()).collect())
+    }).collect()
+}
+
+fn d7canequal(target: i64, nums: &[i64], idx: usize, total: i64) -> bool {
+    if idx >= nums.len() {
+        return total == target
+    }
+    if total > target {
+        return false
+    }
+    d7canequal(target, nums, idx+1, total+nums[idx]) ||
+    d7canequal(target, nums, idx+1, (if idx==0 {1 } else {total})*nums[idx])
+}
+
+pub fn d7a(input: Vec<String>) -> String {
+    let input = parsed7(input);
+    let ans: i64 = input.into_par_iter().filter_map(|i| {
+        if d7canequal(i.0, &i.1, 0, 0) {
+            Some(i.0)
+        }
+        else { None }
+    }).sum();
+    ans.to_string()
+}
+
 
 #[cfg(test)]
 mod tests {
