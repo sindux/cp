@@ -1,6 +1,7 @@
 
 use std::{cmp::Ordering, collections::{HashMap, HashSet}};
 
+use rayon::iter::{IntoParallelIterator, ParallelIterator};
 use regex::Regex;
 
 fn parsed1(input: Vec<String>) -> (Vec<i32>, Vec<i32>) {
@@ -223,9 +224,9 @@ pub fn d5b(input: Vec<String>) -> String {
     ans.to_string()
 }
 
-fn d6guard(input: &[String]) -> (usize, usize) {
+fn d6guard(input: &[Vec<u8>]) -> (usize, usize) {
     for (y, row) in input.iter().enumerate() {
-        for (x, ch) in row.as_bytes().iter().enumerate() {
+        for (x, ch) in row.iter().enumerate() {
             if *ch == '^' as u8 {
                 return (y,x)
             }
@@ -234,7 +235,7 @@ fn d6guard(input: &[String]) -> (usize, usize) {
     unreachable!("Guard not found");
 }
 
-fn d6runguard(input: &[String], oy: usize, ox: usize) -> i32 {
+fn d6runguard(input: &[Vec<u8>], oy: usize, ox: usize) -> i32 {
     let (mut y, mut x) = d6guard(&input);
     let dirs = [(-1isize,0isize),(0,1),(1,0),(0,-1)];
     let mut dir = 0;
@@ -254,7 +255,7 @@ fn d6runguard(input: &[String], oy: usize, ox: usize) -> i32 {
         let ny = ny as usize;
         let nx = nx as usize;
         if ny==oy && nx==ox ||
-           input[ny].as_bytes()[nx] == '#' as u8 {
+           input[ny][nx] == '#' as u8 {
             dir = (dir + 1)%dirs.len();
             continue
         }
@@ -272,19 +273,20 @@ fn d6runguard(input: &[String], oy: usize, ox: usize) -> i32 {
 }
 
 pub fn d6a(input: Vec<String>) -> String {
+    let input: Vec<_> = input.into_iter().map(|l|l.as_bytes().to_vec()).collect();
     d6runguard(&input, usize::MAX, usize::MAX).to_string()
 }
 
 pub fn d6b(input: Vec<String>) -> String {
-    let mut ans = 0;
-    for y in 0..input.len() {
-        for x in 0..input[y].len() {
+    let input: Vec<_> = input.into_iter().map(|l|l.as_bytes().to_vec()).collect();
+    let ans: i32 = (0..input.len()).into_par_iter().map(|y| {
+        (0..input[y].len()).into_par_iter().map(|x| {
             if d6runguard(&input, y, x) == -1 {
-                ans+=1;
-                //println!("{y} {x}");
+                1
             }
-        }
-    }
+            else { 0 }
+        }).sum::<i32>()
+    }).sum();
     ans.to_string()
 }
 
