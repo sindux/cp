@@ -223,26 +223,28 @@ pub fn d5b(input: Vec<String>) -> String {
     ans.to_string()
 }
 
-pub fn d6a(input: Vec<String>) -> String {
-    fn guard(input: &[String]) -> (usize, usize) {
-        for (y, row) in input.iter().enumerate() {
-            for (x, ch) in row.as_bytes().iter().enumerate() {
-                if *ch == '^' as u8 {
-                    return (y,x)
-                }
+fn d6guard(input: &[String]) -> (usize, usize) {
+    for (y, row) in input.iter().enumerate() {
+        for (x, ch) in row.as_bytes().iter().enumerate() {
+            if *ch == '^' as u8 {
+                return (y,x)
             }
         }
-        unreachable!("Guard not found");
     }
-    let (mut y, mut x) = guard(&input);
+    unreachable!("Guard not found");
+}
+
+fn d6runguard(input: &[String], oy: usize, ox: usize) -> i32 {
+    let (mut y, mut x) = d6guard(&input);
     let dirs = [(-1isize,0isize),(0,1),(1,0),(0,-1)];
     let mut dir = 0;
     let mut ans = 1;
     let h = input.len() as isize;
     let w = input[0].len() as isize;
 
-    let mut visited = vec![vec![0;w as usize]; h as usize];
-    visited[y][x] = 1;
+    const UNVISITED: usize = 7;
+    let mut visited = vec![vec![UNVISITED; w as usize]; h as usize];
+    visited[y][x] = dir;
     loop {
         let ny = y as isize + dirs[dir].0;
         let nx = x as isize + dirs[dir].1;
@@ -251,19 +253,41 @@ pub fn d6a(input: Vec<String>) -> String {
         }
         let ny = ny as usize;
         let nx = nx as usize;
-        if input[ny].as_bytes()[nx] == '#' as u8 {
+        if ny==oy && nx==ox ||
+           input[ny].as_bytes()[nx] == '#' as u8 {
             dir = (dir + 1)%dirs.len();
             continue
         }
-        if visited[ny][nx] == 0 {
+        if visited[ny][nx]==dir {
+            return -1    // loop found
+        }
+        if visited[ny][nx] == UNVISITED {
             ans+=1;
-            visited[ny][nx]=1;
+            visited[ny][nx]=dir;
         }
         y = ny;
         x = nx;
     }
+    ans
+}
+
+pub fn d6a(input: Vec<String>) -> String {
+    d6runguard(&input, usize::MAX, usize::MAX).to_string()
+}
+
+pub fn d6b(input: Vec<String>) -> String {
+    let mut ans = 0;
+    for y in 0..input.len() {
+        for x in 0..input[y].len() {
+            if d6runguard(&input, y, x) == -1 {
+                ans+=1;
+                //println!("{y} {x}");
+            }
+        }
+    }
     ans.to_string()
 }
+
 
 #[cfg(test)]
 mod tests {
