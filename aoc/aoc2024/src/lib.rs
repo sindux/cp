@@ -345,34 +345,48 @@ fn parsed8(input: Vec<String>) -> HashMap<u8, Vec<(isize, isize)>> {
     ans
 }
 
-pub fn d8a(input: Vec<String>) -> String {
+fn d8caltanti(input: Vec<String>, resonant: bool) -> HashSet<(isize, isize)> {
     let h= input.len() as isize;
     let w = input[0].len() as isize;
     let input = parsed8(input);
     let antilocs: HashSet<_> = input.into_par_iter().flat_map(|(_,locs)| {
-        let mut antins = Vec::with_capacity(locs.len().pow(2) - locs.len());
+        let mut antins = Vec::with_capacity(locs.len().pow(2));
         for n1 in &locs {
             for n2 in &locs {
                 if n1 != n2 {
                     let dy = n2.0 - n1.0;
                     let dx = n2.1 - n1.1;
-                    let antiy = n1.0 + dy * 2;
-                    let antix = n1.1 + dx * 2;
-                    if antiy>=0 && antiy < h && antix>=0 && antix < w {
+                    let mut antiy = n2.0;
+                    let mut antix = n2.1;
+                    if resonant {
                         antins.push((antiy, antix));
+                    }
+                    loop {
+                        antiy += dy;
+                        antix += dx;
+                        if antiy>=0 && antiy < h && antix>=0 && antix < w {
+                            antins.push((antiy, antix));
+                            if !resonant { break }
+                        }
+                        else {
+                            break
+                        }
                     }
                 }
             }
         }
         antins
     }).collect();
-    antilocs.len().to_string()
+    antilocs
 }
 
-// 1 -> 0
-// 2 -> 2
-// 3 -> 6
-// 4 -> 12
+pub fn d8a(input: Vec<String>) -> String {
+    d8caltanti(input, false).len().to_string()
+}
+
+pub fn d8b(input: Vec<String>) -> String {
+    d8caltanti(input, true).len().to_string()
+}
 
 
 #[cfg(test)]
