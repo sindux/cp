@@ -388,6 +388,83 @@ pub fn d8b(input: Vec<String>) -> String {
     d8caltanti(input, true).len().to_string()
 }
 
+#[derive(Debug)]
+struct D9defrag {
+    map: Vec<u8>,
+    curidx: isize,
+    curidxexpand: isize,
+    tomoveidx: isize,
+}
+
+impl D9defrag {
+    fn new(input: &str) -> D9defrag {
+        let chars: Vec<_> = input.as_bytes().iter().map(|ch| ch-'0' as u8).collect();
+        D9defrag {
+            curidx: 0,
+            curidxexpand: 0,
+            tomoveidx: chars.len() as isize - 2 + chars.len() as isize%2,
+            map: chars,
+        }
+    }
+
+    fn is_space(idx: isize) -> bool {
+        idx%2 != 0
+    }
+
+    fn checksum(fileno: isize, pos: isize, size: u8) -> i64 {
+        let mut ans = 0;
+        // fileno*pos + fileno*(pos+1) + fileno*(pos+2)
+        // fileno*pos*(0+1+2+...+ size-1)
+        for i in pos..pos+size as isize {
+            ans+=fileno*i;
+        }
+        ans as i64
+    }
+
+    fn fillspace(&mut self) -> Vec<(isize, isize, u8)> {  // (origpos, newpos, size)
+        let mut ans = Vec::new();
+        let mut avail_space = self.map[self.curidx as usize];
+        while self.curidx < self.tomoveidx {
+            let tomove = avail_space.min(self.map[self.tomoveidx as usize]);
+            self.map[self.tomoveidx as usize] -= tomove;
+            avail_space -= tomove;
+            ans.push((self.tomoveidx, self.curidxexpand, tomove));
+            self.curidxexpand += tomove as isize;
+            if self.map[self.tomoveidx as usize]==0 {
+                self.tomoveidx-=2;
+            }
+            if avail_space == 0 {
+                break
+            }
+        }
+        ans
+    }
+
+    fn go(mut self) -> i64 {
+        let mut ans = 0;
+        while self.curidx <= self.tomoveidx {
+            if D9defrag::is_space(self.curidx) {
+                let moved = self.fillspace();
+                for (origpos, newpos, size) in &moved {
+                    ans += D9defrag::checksum(*origpos/2, *newpos, *size);
+                }
+            }
+            else {
+                ans += D9defrag::checksum(self.curidx/2, self.curidxexpand, self.map[self.curidx as usize]);
+                self.curidxexpand += self.map[self.curidx as usize] as isize;
+            }
+            self.curidx+=1;
+        }
+        ans
+    }
+}
+
+
+pub fn d9a(input: Vec<String>) -> String {
+    let input = D9defrag::new(&input[0]);
+    input.go().to_string()
+}
+
 
 #[cfg(test)]
 mod tests {
