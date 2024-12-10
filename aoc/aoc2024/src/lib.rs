@@ -394,6 +394,7 @@ struct D9defrag {
     curidx: isize,
     curidxexpand: isize,
     tomoveidx: isize,
+    emptyfilled: Vec<u8>,
 }
 
 impl D9defrag {
@@ -403,6 +404,18 @@ impl D9defrag {
             curidx: 0,
             curidxexpand: 0,
             tomoveidx: chars.len() as isize - 2 + chars.len() as isize%2,
+            map: chars,
+            emptyfilled: vec![],   // not used
+        }
+    }
+
+    fn newwhole(input: &str) -> D9defrag {
+        let chars: Vec<_> = input.as_bytes().iter().map(|ch| ch-'0' as u8).collect();
+        D9defrag {
+            curidx: 1,
+            curidxexpand: chars[0]as isize,
+            tomoveidx: chars.len() as isize - 2 + chars.len() as isize%2,
+            emptyfilled: vec![0; chars.len()],
             map: chars,
         }
     }
@@ -457,12 +470,58 @@ impl D9defrag {
         }
         ans
     }
+
+    fn findspace(&mut self, tomoveidx: isize, tomove: u8) -> Option<isize> {
+        let mut emptyidx = self.curidx;
+        let mut emptyidxexpand = self.curidxexpand;
+        while emptyidx < tomoveidx {
+            let avail_space = self.map[emptyidx as usize] - self.emptyfilled[emptyidx as usize];
+            if avail_space >= tomove {
+                let newpos = emptyidxexpand + self.emptyfilled[emptyidx as usize] as isize;
+                self.emptyfilled[emptyidx as usize]+=tomove;
+                return Some(newpos)
+            }
+            emptyidxexpand += self.map[emptyidx as usize] as isize + self.map[emptyidx as usize+1] as isize;
+            emptyidx+=2;
+        }
+        None
+    }
+
+    fn gowhole(mut self) -> i64 {
+        let mut ans = 0;
+
+        let mut moved = vec![false; self.map.len()];
+        for tomoveidx in (0..=self.tomoveidx).rev().step_by(2) {
+            let tomove = self.map[tomoveidx as usize];
+            if let Some(newpos) = self.findspace(tomoveidx, tomove) {
+                ans += D9defrag::checksum(tomoveidx/2, newpos, tomove);
+                moved[tomoveidx as usize]=true;
+            }
+        }
+
+        let mut curidxexpand = 0;
+        for curidx in (0..self.map.len()).step_by(2) {
+            if !moved[curidx] {
+                ans += D9defrag::checksum(curidx as isize/2, curidxexpand, self.map[curidx]);
+            }
+            curidxexpand += self.map[curidx] as isize;
+            let freespace = if curidx + 1 < self.map.len() { self.map[curidx+1] } else { 0 };
+            curidxexpand += freespace as isize;
+        }
+
+        ans
+    }
 }
 
 
 pub fn d9a(input: Vec<String>) -> String {
     let input = D9defrag::new(&input[0]);
     input.go().to_string()
+}
+
+pub fn d9b(input: Vec<String>) -> String {
+    let input = D9defrag::newwhole(&input[0]);
+    input.gowhole().to_string()
 }
 
 
