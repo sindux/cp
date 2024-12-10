@@ -1,5 +1,5 @@
 
-use std::{cmp::Ordering, collections::{HashMap, HashSet}};
+use std::{cmp::Ordering, collections::{HashMap, HashSet, VecDeque}};
 
 use rayon::iter::{IntoParallelIterator, ParallelIterator};
 use regex::Regex;
@@ -522,6 +522,52 @@ pub fn d9a(input: Vec<String>) -> String {
 pub fn d9b(input: Vec<String>) -> String {
     let input = D9defrag::newwhole(&input[0]);
     input.gowhole().to_string()
+}
+
+fn _vs2vvu(input: Vec<String>, only_nums: bool) -> Vec<Vec<u8>> {
+    input.into_iter().map(|l|l.as_bytes().iter().map(|&c| 
+        if only_nums {
+            if c >= b'0' {
+                c - b'0'
+            }
+            else { u8::MAX }
+        } 
+        else 
+        {
+            c
+        }
+    ).collect()).collect()
+}
+
+pub fn d10a(input: Vec<String>) -> String {
+    let input = _vs2vvu(input, true);
+    let h = input.len() as isize;
+    let w = input[0].len() as isize;
+    let mut q = VecDeque::new();
+    for y in 0..h {
+        for x in 0..w {
+            if input[y as usize][x as usize]==0 {
+                q.push_back((y,x,y,x,0));
+            }
+        }
+    }
+
+    let mut ans=HashSet::new();
+    while let Some((y,x,origy, origx, prev)) = q.pop_front() {
+        for (dy,dx) in [(0isize,1isize),(0,-1),(-1,0),(1,0)] {
+            let ny = y + dy;
+            let nx = x + dx;
+            if ny>=0 && ny < h && nx>=0 && nx<w && input[ny as usize][nx as usize] == prev+1 {
+                if prev==8 {
+                    ans.insert((ny,nx,origy,origx));
+                }
+                else {
+                    q.push_back((ny,nx,origy,origx,prev+1));
+                }
+            } 
+        }
+    }
+    ans.len().to_string()
 }
 
 
