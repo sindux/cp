@@ -539,7 +539,7 @@ fn _vs2vvu(input: Vec<String>, only_nums: bool) -> Vec<Vec<u8>> {
     ).collect()).collect()
 }
 
-pub fn d10a(input: Vec<String>) -> String {
+fn d10(input: Vec<String>) -> (usize, i32) {   // (score, rating)
     let input = _vs2vvu(input, true);
     let h = input.len() as isize;
     let w = input[0].len() as isize;
@@ -553,6 +553,7 @@ pub fn d10a(input: Vec<String>) -> String {
     }
 
     let mut ans=HashSet::new();
+    let mut cnt_paths = 0;
     while let Some((y,x,origy, origx, prev)) = q.pop_front() {
         for (dy,dx) in [(0isize,1isize),(0,-1),(-1,0),(1,0)] {
             let ny = y + dy;
@@ -560,6 +561,7 @@ pub fn d10a(input: Vec<String>) -> String {
             if ny>=0 && ny < h && nx>=0 && nx<w && input[ny as usize][nx as usize] == prev+1 {
                 if prev==8 {
                     ans.insert((ny,nx,origy,origx));
+                    cnt_paths+=1;
                 }
                 else {
                     q.push_back((ny,nx,origy,origx,prev+1));
@@ -567,9 +569,16 @@ pub fn d10a(input: Vec<String>) -> String {
             } 
         }
     }
-    ans.len().to_string()
+    (ans.len(), cnt_paths)
 }
 
+pub fn d10a(input: Vec<String>) -> String {
+    d10(input).0.to_string()
+}
+
+pub fn d10b(input: Vec<String>) -> String {
+    d10(input).1.to_string()
+}
 
 #[cfg(test)]
 mod tests {
