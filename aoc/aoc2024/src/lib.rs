@@ -1,5 +1,5 @@
 
-use std::{cmp::Ordering, collections::{HashMap, HashSet, VecDeque}};
+use std::{cmp::Ordering, collections::{HashMap, HashSet, VecDeque}, fmt::Debug, str::FromStr};
 
 use rayon::iter::{IntoParallelIterator, ParallelIterator};
 use regex::Regex;
@@ -45,7 +45,7 @@ fn d2_is_safe(levels: &Vec<i32>) -> bool {
     true
 }
 
-fn _s2vi(input: &str) -> Vec<i32> {
+fn _s2vi<T>(input: &str) -> Vec<T> where T: FromStr, T::Err: Debug {
     input.split_ascii_whitespace().map(|n| n.parse().unwrap()).collect()
 }
 
@@ -579,6 +579,35 @@ pub fn d10a(input: Vec<String>) -> String {
 pub fn d10b(input: Vec<String>) -> String {
     d10(input).1.to_string()
 }
+
+fn d11(mut input: Vec<i64>, n: i32) -> i64 {
+    for _ in 0..n {
+        let mut next = Vec::with_capacity(input.len()*2);
+        for n in input.into_iter() {
+            if n == 0 {
+                next.push(1);
+            } else {
+                let s = n.to_string();
+                let l = s.len();
+                if l%2==0 {
+                    next.push(s[..l/2].parse().unwrap());
+                    next.push(s[l/2..].parse().unwrap());
+                }
+                else {
+                    next.push(n*2024);
+                }
+            }
+        }
+        input = next
+    }
+    input.len() as i64
+}
+
+pub fn d11a(input: Vec<String>) -> String {
+    let input = _s2vi(input[0].as_str());
+    input.into_par_iter().map(|d| d11(vec![d], 25)).sum::<i64>().to_string()
+}
+
 
 #[cfg(test)]
 mod tests {
