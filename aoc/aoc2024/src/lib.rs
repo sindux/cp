@@ -581,24 +581,41 @@ pub fn d10b(input: Vec<String>) -> String {
 }
 
 fn d11(mut input: Vec<i64>, n: i32) -> i64 {
-    for _ in 0..n {
+    fn trysplit(mut n: i64) -> (i64, i64) {
+        let mut i = 0i64;
+        let mut mult = 1;
+        let mut cnt = 0;
+        while n>0 {
+            i += mult*(n%10);
+            n/=10;
+            mult*=10;
+            cnt+=1;
+        }
+        if cnt%2==0 {
+            let div = 10i64.pow(cnt/2);
+            (i/div, i%div)
+        } else {
+            (0, 0)
+        }
+    }
+    for nn in 0..n {
         let mut next = Vec::with_capacity(input.len()*2);
         for n in input.into_iter() {
             if n == 0 {
                 next.push(1);
             } else {
-                let s = n.to_string();
-                let l = s.len();
-                if l%2==0 {
-                    next.push(s[..l/2].parse().unwrap());
-                    next.push(s[l/2..].parse().unwrap());
+                let (a,b) = trysplit(n);
+                if (a,b)!=(0,0) {
+                    next.push(a);
+                    next.push(b);
                 }
                 else {
                     next.push(n*2024);
                 }
             }
         }
-        input = next
+        input = next;
+    	//println!("{nn} {} {:?}", input.len(), input);
     }
     input.len() as i64
 }
@@ -606,6 +623,11 @@ fn d11(mut input: Vec<i64>, n: i32) -> i64 {
 pub fn d11a(input: Vec<String>) -> String {
     let input = _s2vi(input[0].as_str());
     input.into_par_iter().map(|d| d11(vec![d], 25)).sum::<i64>().to_string()
+}
+
+pub fn d11b(input: Vec<String>) -> String {
+    let input = _s2vi(input[0].as_str());
+    input.into_par_iter().map(|d| d11(vec![d], 75)).sum::<i64>().to_string()
 }
 
 
