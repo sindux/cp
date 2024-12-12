@@ -580,7 +580,7 @@ pub fn d10b(input: Vec<String>) -> String {
     d10(input).1.to_string()
 }
 
-fn d11(mut input: Vec<i64>, n: i32) -> i64 {
+fn d11(input: i64, n: i32) -> i64{
     fn trysplit(mut n: i64) -> (i64, i64) {
         let mut i = 0i64;
         let mut mult = 1;
@@ -598,36 +598,38 @@ fn d11(mut input: Vec<i64>, n: i32) -> i64 {
             (0, 0)
         }
     }
-    for nn in 0..n {
-        let mut next = Vec::with_capacity(input.len()*2);
-        for n in input.into_iter() {
+
+    let mut cur = HashMap::new();
+    cur.insert(input, 1);
+    for _ in 0..n {
+        let mut next: HashMap<i64, i64> = HashMap::new();
+        for (n, cnt) in cur.into_iter() {
             if n == 0 {
-                next.push(1);
+                *next.entry(1).or_default()+=cnt;
             } else {
                 let (a,b) = trysplit(n);
                 if (a,b)!=(0,0) {
-                    next.push(a);
-                    next.push(b);
+                    *next.entry(a).or_default()+=cnt;
+                    *next.entry(b).or_default()+=cnt;
                 }
                 else {
-                    next.push(n*2024);
+                    *next.entry(n*2024).or_default()+=cnt;
                 }
             }
         }
-        input = next;
-    	//println!("{nn} {} {:?}", input.len(), input);
+        cur = next;
     }
-    input.len() as i64
+    cur.values().sum()
 }
 
 pub fn d11a(input: Vec<String>) -> String {
     let input = _s2vi(input[0].as_str());
-    input.into_par_iter().map(|d| d11(vec![d], 25)).sum::<i64>().to_string()
+    input.into_par_iter().map(|d| d11(d, 25)).sum::<i64>().to_string()
 }
 
 pub fn d11b(input: Vec<String>) -> String {
     let input = _s2vi(input[0].as_str());
-    input.into_par_iter().map(|d| d11(vec![d], 75)).sum::<i64>().to_string()
+    input.into_par_iter().map(|d| d11(d, 75)).sum::<i64>().to_string()
 }
 
 
