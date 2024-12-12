@@ -632,6 +632,62 @@ pub fn d11b(input: Vec<String>) -> String {
     input.into_par_iter().map(|d| d11(d, 75)).sum::<i64>().to_string()
 }
 
+fn d12(visited: &mut [Vec<bool>], grid: &[Vec<u8>], y: usize, x: usize) -> i32 {
+    let h = grid.len() as isize;
+    let w = grid[0].len() as isize;
+    let mut q = VecDeque::new();
+    q.push_back((y,x));
+    visited[y][x]=true;
+    let region = grid[y][x];
+    let mut area = 0;
+    let mut perm = 0;
+    while let Some((y,x)) = q.pop_front() {
+        area+=1;
+        for (dy,dx) in [(0isize,1isize), (0,-1), (1,0), (-1,0)] {
+            let ny = y as isize + dy;
+            let nx = x as isize + dx;
+            if ny < 0 {
+                perm+=1;
+            }
+            if ny >= h {
+                perm+=1;
+            }
+            if nx < 0 {
+                perm+=1;
+            }
+            if nx >= w {
+                perm+=1;
+            }
+            if ny>=0 && ny < h && nx>=0 && nx < w {
+                let ny = ny as usize;
+                let nx = nx as usize;
+                if grid[ny][nx] != region {
+                    perm+=1;
+                } else if !visited[ny][nx] {
+                    visited[ny][nx] = true;
+                    q.push_back((ny,nx));
+                }
+            }
+        }
+    }
+    area * perm
+}
+
+pub fn d12a(input: Vec<String>) -> String {
+    let input = _vs2vvu(input, false);
+    let h = input.len();
+    let w = input[0].len();
+    let mut visited = vec![vec![false; w]; h];
+    let mut cost = 0;
+    for y in 0..h {
+        for x in 0..w {
+            if !visited[y][x] {
+                cost += d12(&mut visited, &input, y,x);
+            }
+        }
+    }
+    cost.to_string()
+}
 
 #[cfg(test)]
 mod tests {
