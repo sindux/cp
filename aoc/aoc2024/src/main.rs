@@ -1,14 +1,5 @@
-use std::{env, fs, io::{self, BufRead}};
+use std::env;
 use aoc2024::*;
-
-fn read(f: String) -> Vec<String>
-{
-    let input = io::BufReader::new(fs::File::open(f).expect("Error reading input file"));
-    input
-        .lines()
-        .map(|line| line.expect("Error reading input line"))
-        .collect()
-}
 
 fn main() {
     let mut args= env::args(); args.next();
@@ -30,7 +21,7 @@ fn main() {
         "9a" => d9a, "9b" => d9b,
         "10a" => d10a, "10b" => d10b,
         "11a" => d11a, "11b" => d11b,
-        "12a" => d12a,
+        "12a" => d12a, "12b" => d12b,
         _ => panic!("Unknown day")
     };
     println!("{}", res(input));

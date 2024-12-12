@@ -1,8 +1,17 @@
 
-use std::{cmp::Ordering, collections::{HashMap, HashSet, VecDeque}, fmt::Debug, str::FromStr};
+use std::{cmp::Ordering, collections::{HashMap, HashSet, VecDeque}, fmt::Debug, fs, io::{self, BufRead}, str::FromStr};
 
 use rayon::iter::{IntoParallelIterator, ParallelIterator};
 use regex::Regex;
+
+pub fn read(f: String) -> Vec<String>
+{
+    let input = io::BufReader::new(fs::File::open(f).expect("Error reading input file"));
+    input
+        .lines()
+        .map(|line| line.expect("Error reading input line"))
+        .collect()
+}
 
 fn parsed1(input: Vec<String>) -> (Vec<i32>, Vec<i32>) {
     let input: Vec<(i32, i32)> = input.into_iter().map(|l|{
@@ -632,7 +641,7 @@ pub fn d11b(input: Vec<String>) -> String {
     input.into_par_iter().map(|d| d11(d, 75)).sum::<i64>().to_string()
 }
 
-fn d12(visited: &mut [Vec<bool>], grid: &[Vec<u8>], y: usize, x: usize) -> i32 {
+fn d12(visited: &mut [Vec<bool>], grid: &[Vec<u8>], y: usize, x: usize) -> (i32, i32) {
     let h = grid.len() as isize;
     let w = grid[0].len() as isize;
     let mut q = VecDeque::new();
@@ -640,29 +649,38 @@ fn d12(visited: &mut [Vec<bool>], grid: &[Vec<u8>], y: usize, x: usize) -> i32 {
     visited[y][x]=true;
     let region = grid[y][x];
     let mut area = 0;
-    let mut perm = 0;
+    let mut hor_fences = vec![];
+    let mut ver_fences = vec![];
     while let Some((y,x)) = q.pop_front() {
         area+=1;
         for (dy,dx) in [(0isize,1isize), (0,-1), (1,0), (-1,0)] {
             let ny = y as isize + dy;
             let nx = x as isize + dx;
             if ny < 0 {
-                perm+=1;
+                hor_fences.push((ny,y as isize,x as isize, dy));
             }
             if ny >= h {
-                perm+=1;
+                hor_fences.push((y as isize, ny, x as isize, dy));
             }
             if nx < 0 {
-                perm+=1;
+                ver_fences.push((nx, x as isize, y as isize, dx));
             }
             if nx >= w {
-                perm+=1;
+                ver_fences.push((x as isize, nx, y as isize, dx));
             }
             if ny>=0 && ny < h && nx>=0 && nx < w {
                 let ny = ny as usize;
                 let nx = nx as usize;
                 if grid[ny][nx] != region {
-                    perm+=1;
+                    if dx.abs() == 1 {
+                        let x0 = (nx as isize).min(x as isize);
+                        let x1= (nx as isize).max(x as isize);
+                        ver_fences.push((x0, x1,y as isize, dx));
+                    } else {
+                        let y0 = (ny as isize).min(y as isize);
+                        let y1 = (ny as isize).max(y as isize);
+                        hor_fences.push((y0, y1, x as isize, dy));
+                    }
                 } else if !visited[ny][nx] {
                     visited[ny][nx] = true;
                     q.push_back((ny,nx));
@@ -670,23 +688,49 @@ fn d12(visited: &mut [Vec<bool>], grid: &[Vec<u8>], y: usize, x: usize) -> i32 {
             }
         }
     }
-    area * perm
+    ver_fences.sort_unstable();
+    hor_fences.sort_unstable();
+    fn cnt_sides(fences: &[(isize, isize, isize, isize)]) -> i32 {
+        let mut ans = 1;
+        for f in fences.windows(2) {
+            let is_next = f[0].0 == f[1].0 && f[0].1 == f[1].1 && f[0].2 +1 == f[1].2 && f[0].3==f[1].3;
+            if !is_next {
+                ans+=1;
+            }
+        }
+        ans
+    }
+    let cnt_sides = cnt_sides(&hor_fences) + cnt_sides(&ver_fences);
+    // println!("{} {area} {} {cnt_sides} {hor_fences:?} {ver_fences:?}", region as char, hor_fences.len() + ver_fences.len());
+    (area * (ver_fences.len() + hor_fences.len()) as i32, area * cnt_sides)
 }
 
-pub fn d12a(input: Vec<String>) -> String {
+
+fn d12outer(input: Vec<String>) -> (i32, i32) {
     let input = _vs2vvu(input, false);
     let h = input.len();
     let w = input[0].len();
     let mut visited = vec![vec![false; w]; h];
     let mut cost = 0;
+    let mut costdisc = 0;
     for y in 0..h {
         for x in 0..w {
             if !visited[y][x] {
-                cost += d12(&mut visited, &input, y,x);
+                let regcost = d12(&mut visited, &input, y,x);
+                cost += regcost.0;
+                costdisc += regcost.1;
             }
         }
     }
-    cost.to_string()
+    (cost, costdisc)
+}
+
+pub fn d12a(input: Vec<String>) -> String {
+    d12outer(input).0.to_string()
+}
+
+pub fn d12b(input: Vec<String>) -> String {
+    d12outer(input).1.to_string()
 }
 
 #[cfg(test)]
@@ -694,8 +738,19 @@ mod tests {
     use super::*;
 
     #[test]
-    fn it_works() {
-        let result = d1(vec!["a".to_string()]);
-        assert_eq!(result, "4".to_string());
+    fn test_d12b() {
+        for (infile, expected) in [
+            ("12ex.txt".to_string(), 1206),
+            ("12ex2.txt".to_string(), 368),
+            ("12ex3.txt".to_string(), 236),
+            ("12ex4.txt".to_string(), 80),
+            ("12ex5.txt".to_string(), 436),
+        ] {
+            let mut file = "input/".to_string();
+            file.push_str(infile.clone().as_str());
+            let input = read(file);
+            let result = d12b(input);
+            assert_eq!(expected.to_string(), result, "{}", infile);
+        }
     }
 }
