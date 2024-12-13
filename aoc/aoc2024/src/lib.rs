@@ -736,33 +736,39 @@ pub fn d12b(input: Vec<String>) -> String {
     d12outer(input).1.to_string()
 }
 
-fn parsed13(input: Vec<String>) -> Vec<((i32,i32),(i32,i32),(i32,i32))> {
+fn parsed13(input: Vec<String>, prize_offset: i64) -> Vec<((i64,i64),(i64,i64),(i64,i64))> {
     let btn_parse = Regex::new(r"Button .: X\+(\d+), Y\+(\d+)").unwrap();
     let prize_parse = Regex::new(r"Prize: X=(\d+), Y=(\d+)").unwrap();
     input.chunks(4).map(|chunks| {
         let (_, [ax, ay]) = btn_parse.captures(&chunks[0]).expect("Btn A").extract();
         let (_, [bx, by]) = btn_parse.captures(&chunks[1]).expect("Btn B").extract();
         let (_, [px, py]) = prize_parse.captures(&chunks[2]).expect("Price").extract();
-        ((ay.parse::<i32>().unwrap(), ax.parse::<i32>().unwrap()), 
-         (by.parse::<i32>().unwrap(), bx.parse::<i32>().unwrap()), 
-         (py.parse::<i32>().unwrap(), px.parse::<i32>().unwrap()))
+        ((ay.parse::<i64>().unwrap(), ax.parse::<i64>().unwrap()), 
+         (by.parse::<i64>().unwrap(), bx.parse::<i64>().unwrap()), 
+         (py.parse::<i64>().unwrap() + prize_offset, px.parse::<i64>().unwrap() + prize_offset))
     }).collect()
 }
 
-pub fn d13a(input: Vec<String>) -> String {
-    let input=parsed13(input);
+fn d13(input: Vec<String>, prize_offset: i64) -> String {
+    let input=parsed13(input, prize_offset);
     input.into_par_iter().filter_map(|((ay,ax),(by,bx),(py,px))| {
-        for a in 0..=100 {
-            for b in 0..=100 {
-                let y = a*ay+b*by;
-                let x = a*ax+b*bx;
-                if y==py && x==px {
-                    return Some((a, b))
-                }
+        let denum = ax * by - ay * bx;
+        let numa = -bx * py + by * px;
+        if numa % denum == 0 {
+            let numb = ax * py - ay * px;
+            if numb % denum == 0 {
+                return Some((numa/denum, numb/denum))
             }
         }
         None
-    }).map(|(a,b)| a*3 + b).sum::<i32>().to_string()
+    }).map(|(a,b)| a*3 + b).sum::<i64>().to_string()
+}
+
+pub fn d13a(input: Vec<String>) -> String {
+    d13(input, 0)
+}
+pub fn d13b(input: Vec<String>) -> String {
+    d13(input, 10000000000000)
 }
 
 #[cfg(test)]
