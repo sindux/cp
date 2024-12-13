@@ -13,6 +13,7 @@ pub fn read(f: String) -> Vec<String>
         .collect()
 }
 
+// region: day 1-10
 fn parsed1(input: Vec<String>) -> (Vec<i32>, Vec<i32>) {
     let input: Vec<(i32, i32)> = input.into_iter().map(|l|{
         let l:  Vec<i32> = l.split_ascii_whitespace().map(|n|n.parse().unwrap()).collect();
@@ -589,6 +590,8 @@ pub fn d10b(input: Vec<String>) -> String {
     d10(input).1.to_string()
 }
 
+// endregion
+
 fn d11(input: i64, n: i32) -> i64{
     fn trysplit(mut n: i64) -> (i64, i64) {
         let mut i = 0i64;
@@ -731,6 +734,35 @@ pub fn d12a(input: Vec<String>) -> String {
 
 pub fn d12b(input: Vec<String>) -> String {
     d12outer(input).1.to_string()
+}
+
+fn parsed13(input: Vec<String>) -> Vec<((i32,i32),(i32,i32),(i32,i32))> {
+    let btn_parse = Regex::new(r"Button .: X\+(\d+), Y\+(\d+)").unwrap();
+    let prize_parse = Regex::new(r"Prize: X=(\d+), Y=(\d+)").unwrap();
+    input.chunks(4).map(|chunks| {
+        let (_, [ax, ay]) = btn_parse.captures(&chunks[0]).expect("Btn A").extract();
+        let (_, [bx, by]) = btn_parse.captures(&chunks[1]).expect("Btn B").extract();
+        let (_, [px, py]) = prize_parse.captures(&chunks[2]).expect("Price").extract();
+        ((ay.parse::<i32>().unwrap(), ax.parse::<i32>().unwrap()), 
+         (by.parse::<i32>().unwrap(), bx.parse::<i32>().unwrap()), 
+         (py.parse::<i32>().unwrap(), px.parse::<i32>().unwrap()))
+    }).collect()
+}
+
+pub fn d13a(input: Vec<String>) -> String {
+    let input=parsed13(input);
+    input.into_par_iter().filter_map(|((ay,ax),(by,bx),(py,px))| {
+        for a in 0..=100 {
+            for b in 0..=100 {
+                let y = a*ay+b*by;
+                let x = a*ax+b*bx;
+                if y==py && x==px {
+                    return Some((a, b))
+                }
+            }
+        }
+        None
+    }).map(|(a,b)| a*3 + b).sum::<i32>().to_string()
 }
 
 #[cfg(test)]
