@@ -771,6 +771,44 @@ pub fn d13b(input: Vec<String>) -> String {
     d13(input, 10000000000000)
 }
 
+fn d14parse(input: Vec<String>) -> Vec<[i32;4]> {
+    let parser = Regex::new(r"p=(\d+),(\d+) v=(-?\d+),(-?\d+)").unwrap();
+    input.into_iter().map(|l| {
+        let parsed: (&str, [&str; 4]) = parser.captures(&l).unwrap().extract();
+        let parsed: Vec<_> =parsed.1.iter().map(|f|f.parse::<i32>().unwrap()).collect();
+        [parsed[1], parsed[0], parsed[3], parsed[2]]
+    }).collect()
+}
+
+fn d14move(h: i32, w: i32, pos: &[i32; 4], t: i32) -> [i32; 2] {
+    let [y,x,vy,vx] = pos;
+    let ny = y + vy * t;
+    let nx = x + vx * t;
+    [ny.rem_euclid(h), nx.rem_euclid(w)]
+}
+
+fn d14region(h: i32, w: i32, [y,x]: &[i32; 2]) -> Option<usize> {
+    let ymid = h/2;
+    if *y==ymid { return None }
+    let xmid = w/2;
+    if *x==xmid { return None }
+    let yreg = y/(ymid+1);
+    let xreg = x/(xmid+1);
+    Some((yreg*2 + xreg) as usize)
+}
+
+pub fn d14a(input: Vec<String>) -> String {
+    let (h, w) = if input.len() <= 15 { (7, 11) } else {(103,101)};
+    let input = d14parse(input);
+    let reg: [i32; 4] = input.iter().map(|r|d14move(h, w,r, 100))
+        .filter_map(|r|d14region(h,w,&r))
+        .fold([0; 4], |mut acc, reg| {
+            acc[reg]+=1;
+            acc
+        });
+    reg.into_iter().product::<i32>().to_string()
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
