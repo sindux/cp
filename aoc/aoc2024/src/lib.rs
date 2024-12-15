@@ -1,6 +1,7 @@
 
 use std::{cmp::Ordering, collections::{HashMap, HashSet, VecDeque}, fmt::Debug, fs, io::{self, BufRead}, str::FromStr};
 
+use plotters::{coord::Shift, prelude::*};
 use rayon::iter::{IntoParallelIterator, ParallelIterator};
 use regex::Regex;
 
@@ -797,17 +798,100 @@ fn d14region(h: i32, w: i32, [y,x]: &[i32; 2]) -> Option<usize> {
     Some((yreg*2 + xreg) as usize)
 }
 
-pub fn d14a(input: Vec<String>) -> String {
+fn d14(input: &[[i32; 4]], t: i32) -> (Vec<[i32;2]>, [i32;4]) {
     let (h, w) = if input.len() <= 15 { (7, 11) } else {(103,101)};
-    let input = d14parse(input);
-    let reg: [i32; 4] = input.iter().map(|r|d14move(h, w,r, 100))
-        .filter_map(|r|d14region(h,w,&r))
-        .fold([0; 4], |mut acc, reg| {
-            acc[reg]+=1;
-            acc
-        });
-    reg.into_iter().product::<i32>().to_string()
+    let pos: Vec<_> = input.iter().map(|r|d14move(h, w,r, t)).collect();
+    let regions = pos.iter().filter_map(|r|d14region(h,w,r))
+    .fold([0; 4], |mut acc, reg| {
+        acc[reg]+=1;
+        acc
+    });
+    (pos, regions)
 }
+
+pub fn d14a(input: Vec<String>) -> String {
+    let input = d14parse(input);
+    d14(&input, 100).1.into_iter().product::<i32>().to_string()
+}
+
+fn d14drawstr(pos: &[[i32; 2]], h: i32, w: i32) -> Vec<String> {
+    let mut out = vec![vec![0u8; w as usize]; h as usize];
+    for p in pos {
+        out[p[0] as usize][p[1] as usize] += 1;
+    }
+    let mut outstr = vec![String::with_capacity(w as usize); h as usize];
+    for (y, row) in out.iter().enumerate() {
+        let s = &mut outstr[y];
+        for &cnt in row {
+            if cnt == 0 {
+                s.push('.');
+            } else {
+                s.push((cnt + b'0') as char);
+            }
+        }
+    }
+    outstr
+}
+
+fn d14mirror(out: &[String]) -> bool {
+    let w = out[0].len()/2;
+    out[0].as_bytes()[0..w].iter().eq(out[0].as_bytes()[w+1..].iter().rev())
+}
+
+struct D14draw<'a> {
+    backend: DrawingArea<BitMapBackend<'a>, Shift>
+}
+impl  D14draw<'_> {
+    fn gif(path: &str, h: usize, w: usize) -> D14draw {
+        D14draw {
+            backend: BitMapBackend::gif(path, (w as u32,h as u32), 1).unwrap().into_drawing_area()
+        }
+    }
+    fn draw(&self, pos: &[[i32; 2]]) {
+        self.backend.fill(&BLACK).unwrap();
+        let mut drawn: HashMap<(i32, i32), i32> = HashMap::new();
+        for p in pos {
+            let cnt = drawn.entry((p[1], p[0])).or_default();
+            *cnt+=1;
+            self.backend.draw_pixel((p[1], p[0]), &Palette99::pick(*cnt as usize)).unwrap();
+        }
+        self.backend.present().unwrap();
+    }
+}
+
+pub fn d14b(input: Vec<String>) -> String {
+    let (h, w) = if input.len() <= 15 { (7, 11) } else {(103,101)};
+    let maxt = if input.len() <= 15 { 100 } else {1_000_000};
+
+    let input = d14parse(input);
+
+    // let draw = D14draw::gif("input/14b.gif", h, w);
+    // [19,78,122,179,225,280,328,381,431,482,534,583]
+    let mut prevprod = 0;
+    for t in 0..=maxt {
+        let (pos,regs) = d14(&input, t);
+
+        // draw.draw(&pos);
+        // if regs[0]==regs[1] && regs[2]==regs[3] {
+        //     let out = d14drawstr(&pos, h as i32, w as i32);
+        //     if d14mirror(&out) {
+        //         println!("{:?}", regs);
+        //         println!("{}", out.join("\n"));
+        //         return t.to_string();
+        //     }
+        // }
+        let prod = regs.iter().product::<i32>();
+        if prevprod > 0 && (prod-prevprod)< -25_000_000 {
+            println!("{t} {prod} {regs:?}");
+        }
+        prevprod = prod;
+        // if t%100000 == 0 {
+        //     println!("t {}", t);
+        // }
+    }
+    "".to_string()
+}
+
 
 #[cfg(test)]
 mod tests {
