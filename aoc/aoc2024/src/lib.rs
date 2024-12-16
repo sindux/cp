@@ -1109,20 +1109,27 @@ pub fn d15b(input: Vec<String>) -> String {
     d15calcpos(&maps).to_string()
 }
 
-pub fn d16a(input: Vec<String>) -> String {
+fn d16(input: Vec<String>) -> (i32, i32) {
     let input = vs2vvc(input);
     let h = input.len() as isize;
     let w = input[0].len() as isize;
     let start = vvc_find(&input, 'S');
     let mut q = BinaryHeap::new();
-    q.push((Reverse(0), start.0, start.1, 0isize, 1isize));
+    q.push((Reverse(0), start.0, start.1, 0isize, 1isize, vec![(start.0, start.1)]));
 
     let mut visited = HashMap::new();
     visited.insert((start.0, start.1, 0isize, 1isize), 0);
 
-    while let Some((Reverse(score), y, x, dy, dx)) = q.pop() {
+    let mut bestscore = i32::MAX;
+    let mut besttiles = HashSet::new();
+    while let Some((Reverse(score), y, x, dy, dx, tiles)) = q.pop() {
+        if score > bestscore { 
+            continue
+        }
         if input[y][x]=='E' {
-            return score.to_string()
+            bestscore = bestscore.min(score);
+            besttiles.extend(tiles);
+            continue
         }
 
         const DIRS: [(isize, isize); 4] = [(0,1),(1,0),(0,-1),(-1,0)];
@@ -1145,14 +1152,24 @@ pub fn d16a(input: Vec<String>) -> String {
                 let nscore = score + rotatescore + 1;
 
                 let prevscore = visited.entry((ny, nx, dir.0, dir.1)).or_insert(i32::MAX);
-                if nscore < *prevscore {
+                if nscore <= *prevscore {
                     *prevscore = nscore;
-                    q.push((Reverse(nscore), ny, nx, dir.0, dir.1));
+                    let mut newtiles = tiles.clone();
+                    newtiles.push((ny, nx));
+                    q.push((Reverse(nscore), ny, nx, dir.0, dir.1, newtiles));
                 }
             }
         }
     }
-    unreachable!()
+    (bestscore, besttiles.len() as i32)
+}
+
+pub fn d16a(input: Vec<String>) -> String {
+    d16(input).0.to_string()
+}
+
+pub fn d16b(input: Vec<String>) -> String {
+    d16(input).1.to_string()
 }
 
 
