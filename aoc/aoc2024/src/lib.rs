@@ -900,7 +900,7 @@ pub fn d14b(input: Vec<String>) -> String {
 }
 
 
-fn d15parse(input: Vec<String>) -> (Vec<Vec<char>>, Vec<char>) {
+fn d15parse(input: Vec<String>, w2: bool) -> (Vec<Vec<char>>, Vec<char>) {
     let mut maps = vec![];
     let mut moves = vec![];
     let mut is_map = true;
@@ -910,7 +910,21 @@ fn d15parse(input: Vec<String>) -> (Vec<Vec<char>>, Vec<char>) {
             continue
         }
         if is_map {
-            maps.push(line.chars().collect());
+            if !w2 {
+                maps.push(line.chars().collect());
+            } else {
+                let mut row = vec![];
+                for ch in line.chars() {
+                    row.append(&mut match ch {
+                        '#' => "##",
+                        'O' => "[]",
+                        '.' => "..",
+                        '@' => "@.",
+                        _ => panic!("Unknown char")
+                    }.chars().collect::<Vec<_>>());
+                }
+                maps.push(row);
+            }
         } else {
             let mut line = line.chars().collect();
             moves.append(&mut line);
@@ -930,7 +944,7 @@ fn d15find(map: &[Vec<char>], what: char) -> (isize, isize) {
     panic!("{what} not found");
 }
 
-fn d15move(maps: &mut [Vec<char>], mut ry: isize, mut rx: isize, dy: isize, dx: isize) -> (isize, isize) {
+fn d15amove(maps: &mut [Vec<char>], mut ry: isize, mut rx: isize, dy: isize, dx: isize) -> (isize, isize) {
     fn find_space(maps: &[Vec<char>], mut ry: isize, mut rx: isize, dy: isize, dx: isize) -> Option<(isize, isize)> {
         let h = maps.len() as isize; 
         let w= maps[0].len() as isize;
@@ -967,7 +981,7 @@ fn d15calcpos(map: &[Vec<char>]) -> usize {
     let mut ans = 0;
     for (y, row) in map.iter().enumerate() {
         for (x, ch) in row.iter().enumerate() {
-            if *ch == 'O' {
+            if *ch == 'O' || *ch=='[' {
                 ans += y*100 + x;
             }
         }
@@ -976,7 +990,7 @@ fn d15calcpos(map: &[Vec<char>]) -> usize {
 }
 
 pub fn d15a(input: Vec<String>) -> String {
-    let (mut maps, moves) = d15parse(input);
+    let (mut maps, moves) = d15parse(input, false);
     let (mut ry, mut rx)=d15find(&maps, '@');
     for mv in moves {
         let (dy,dx) = match mv {
@@ -986,7 +1000,94 @@ pub fn d15a(input: Vec<String>) -> String {
             'v' => (1,0),
             _ => panic!("Unknown move {mv}")
         };
-        (ry,rx)=d15move(&mut maps, ry, rx, dy, dx);
+        (ry,rx)=d15amove(&mut maps, ry, rx, dy, dx);
+    }
+    d15calcpos(&maps).to_string()
+}
+
+fn d15bmove(maps: &mut [Vec<char>], mut ry: isize, rx: isize, dy: isize, dx: isize) -> (isize, isize) {
+    assert_eq!(dx, 0, "Vertical move");
+    fn find_space(maps: &[Vec<char>], mut ry: isize, rx: isize, dy: isize) -> Option<(isize, isize, isize)> {
+        let h = maps.len() as isize; 
+        ry+=dy;
+        if maps[ry as usize][rx as usize]=='.' {
+            return Some((ry,rx,rx));
+        } else if maps[ry as usize][rx as usize]=='#' {
+            return None;
+        }
+        assert!("[]".contains(maps[ry as usize][rx as usize]));
+        let mut left = rx;
+        let mut right = rx+1;
+        if maps[ry as usize][rx as usize]==']' {
+            left-=1;
+            right-=1;
+        }
+        ry+=dy;
+
+        //        [][]  [][][]
+        //  [][]  [][]   [][]    []     []
+        //   []    []     []     []    [] 
+        while ry>=0 && ry < h {
+            if maps[ry as usize][left as usize]==']' {
+                left-=1;
+                right+=1;
+            }
+            if (left..=right).any(|x|maps[ry as usize][x as usize]=='#') {
+                return None
+            } else if (left..=right).all(|x|maps[ry as usize][x as usize]=='.') {
+                return Some((ry, left, right))
+            }
+            ry+=dy;
+        }
+        unreachable!();
+    }
+    if let Some((mut ty, mut left, mut right)) = find_space(maps, ry, rx, dy) {
+        let block_moved = left < right;
+        // shift all from ry,rx to ty,left-right
+        loop {
+            for x in left..=right {
+                maps[ty as usize][x as usize] = maps[(ty-dy) as usize][x as usize];
+            }
+            ty-=dy;
+            if maps[ty as usize][left as usize]=='.' {
+                left+=1;
+                right-=1;
+            }
+            if ty==ry {
+                maps[ty as usize][rx as usize]='.';
+                if block_moved {
+                    let leftside = maps[(ty+dy+dy) as usize][rx as usize]=='[';
+                    if leftside {
+                        maps[(ty+dy) as usize][(rx+1) as usize]='.';
+                    } else {
+                        maps[(ty+dy) as usize][(rx-1) as usize]='.';
+                    }
+                }
+                ry+=dy;
+                break
+            }
+        }
+    }
+    (ry, rx)
+}
+
+pub fn d15b(input: Vec<String>) -> String {
+    let (mut maps, moves) = d15parse(input, true);
+    let (mut ry, mut rx)=d15find(&maps, '@');
+    for mv in moves {
+        let (dy,dx) = match mv {
+            '<' => (0, -1),
+            '>' => (0, 1),
+            '^' => (-1, 0),
+            'v' => (1,0),
+            _ => panic!("Unknown move {mv}")
+        };
+        if dy==0 {
+            (ry,rx)=d15amove(&mut maps, ry, rx, dy, dx);
+        } else {
+            (ry,rx)=d15bmove(&mut maps, ry, rx, dy, dx);
+        }
+        println!("{mv}\n{}\n", vvc2str(&maps));
     }
     d15calcpos(&maps).to_string()
 }
