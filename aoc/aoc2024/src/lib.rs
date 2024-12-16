@@ -1,5 +1,5 @@
 
-use std::{cmp::Ordering, collections::{HashMap, HashSet, VecDeque}, fmt::Debug, fs, io::{self, BufRead}, str::FromStr};
+use std::{cmp::{Ordering, Reverse}, collections::{BinaryHeap, HashMap, HashSet, VecDeque}, fmt::Debug, fs, io::{self, BufRead}, str::FromStr};
 
 use plotters::{coord::Shift, prelude::*};
 use rayon::iter::{IntoParallelIterator, ParallelIterator};
@@ -12,6 +12,23 @@ pub fn read(f: String) -> Vec<String>
         .lines()
         .map(|line| line.expect("Error reading input line"))
         .collect()
+}
+
+#[allow(dead_code)]
+fn vs2vvc(grid: Vec<String>) -> Vec<Vec<char>> {
+    grid.iter().map(|l|l.chars().collect())
+        .collect()
+}
+
+fn vvc_find(grid: &[Vec<char>], what: char) -> (usize, usize) {
+    for (y, row) in grid.iter().enumerate() {
+        for (x, ch) in row.iter().enumerate() {
+            if *ch == what {
+                return (y,x)
+            }
+        }
+    }
+    panic!("Cannot find {what} in {}", vvc2str(grid));
 }
 
 #[allow(dead_code)]
@@ -1091,6 +1108,53 @@ pub fn d15b(input: Vec<String>) -> String {
     }
     d15calcpos(&maps).to_string()
 }
+
+pub fn d16a(input: Vec<String>) -> String {
+    let input = vs2vvc(input);
+    let h = input.len() as isize;
+    let w = input[0].len() as isize;
+    let start = vvc_find(&input, 'S');
+    let mut q = BinaryHeap::new();
+    q.push((Reverse(0), start.0, start.1, 0isize, 1isize));
+
+    let mut visited = HashMap::new();
+    visited.insert((start.0, start.1, 0isize, 1isize), 0);
+
+    while let Some((Reverse(score), y, x, dy, dx)) = q.pop() {
+        if input[y][x]=='E' {
+            return score.to_string()
+        }
+
+        const DIRS: [(isize, isize); 4] = [(0,1),(1,0),(0,-1),(-1,0)];
+        for dir in &DIRS {
+            let ny = y as isize + dir.0;
+            let nx = x as isize + dir.1;
+            if ny>=0 && ny < h && nx >= 0 && nx < w {
+                let ny = ny as usize;
+                let nx = nx as usize;
+                if input[ny][nx] == '#' { continue }
+
+                let mut rotatescore = 0;
+                if dy != dir.0 || dx != dir.1 {  // rotate
+                    rotatescore = if dy == dir.0 || dx == dir.1 {  // 180
+                        1000 * 2
+                    } else {
+                        1000
+                    };
+                }
+                let nscore = score + rotatescore + 1;
+
+                let prevscore = visited.entry((ny, nx, dir.0, dir.1)).or_insert(i32::MAX);
+                if nscore < *prevscore {
+                    *prevscore = nscore;
+                    q.push((Reverse(nscore), ny, nx, dir.0, dir.1));
+                }
+            }
+        }
+    }
+    unreachable!()
+}
+
 
 #[cfg(test)]
 mod tests {
