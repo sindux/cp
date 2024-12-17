@@ -1154,7 +1154,7 @@ fn d16(input: Vec<String>) -> (i32, i32) {
                 let prevscore = visited.entry((ny, nx, dir.0, dir.1)).or_insert(i32::MAX);
                 if nscore <= *prevscore {
                     *prevscore = nscore;
-                    let mut newtiles = tiles.clone();
+                    let mut newtiles = tiles.clone();  // TODO: bench using im
                     newtiles.push((ny, nx));
                     q.push((Reverse(nscore), ny, nx, dir.0, dir.1, newtiles));
                 }
@@ -1170,6 +1170,100 @@ pub fn d16a(input: Vec<String>) -> String {
 
 pub fn d16b(input: Vec<String>) -> String {
     d16(input).1.to_string()
+}
+
+#[derive(Debug)]
+struct D17Machine {
+    r: [i32; 3],
+    ip: usize,
+    code: Vec<i32>,
+}
+impl D17Machine {
+    fn new(input: Vec<String>) -> D17Machine {
+        let reg_parser = Regex::new(r"Register (\w): (\d+)").unwrap();
+        let mut r = [0i32; 3];
+        for i in 0..3 {
+            let (_, [ri, v]) = reg_parser.captures(&input[0]).unwrap().extract();
+            let reg = ri.as_bytes()[0] - b'A';
+            r[reg as usize] = v.parse().unwrap();
+        }
+        let code = input.last().unwrap().split(": ").nth(1).unwrap()
+            .split(',').map(|c|c.parse().unwrap()).collect();
+        D17Machine {
+            r,
+            ip: 0,
+            code
+        }
+    }
+
+    fn run(&mut self) -> Vec<i32> {
+        let ops = [
+            D17Machine::adv, 
+            D17Machine::bxl,
+            D17Machine::bst, 
+            D17Machine::jnz, 
+            D17Machine::bxc, 
+            D17Machine::out, 
+            D17Machine::bdv, 
+            D17Machine::cdv];
+        let mut ans = vec![];
+        while self.ip < self.code.len() {
+            let op = self.code[self.ip];
+            let opr = self.code[self.ip+1];
+            self.ip+=2;
+            if let Some(res) = ops[op as usize](self, opr) {
+                ans.push(res);
+            }
+        }
+        ans
+    }
+
+    fn combo(&self, opr: i32) -> i32 {
+        match opr {
+            0..=3 => opr,
+            4..6 => self.r[(opr - 4) as usize],
+            _ => panic!("Unrecognized combo operand")
+        }
+    }
+
+    fn adv(&mut self, opr: i32) -> Option<i32> {
+        self.r[0] /= 2i32.pow(self.combo(opr) as u32);
+        None
+    }
+    fn bxl(&mut self, opr: i32) -> Option<i32> {
+        self.r[1] ^= opr;
+        None
+    }
+    fn bst(&mut self, opr: i32) -> Option<i32> {
+        self.r[1] = self.combo(opr)%8;
+        None
+    }
+    fn jnz(&mut self, opr: i32) -> Option<i32> {
+        if self.r[0] != 0 {
+            self.ip = opr as usize;
+        }
+        None
+    }
+    fn bxc(&mut self, _: i32) -> Option<i32> {
+        self.r[1] ^= self.r[2];
+        None
+    }
+    fn out(&mut self, opr: i32) -> Option<i32> {
+        Some(self.combo(opr)%8)
+    }
+    fn bdv(&mut self, opr: i32) -> Option<i32> {
+        self.r[1] = self.r[0] / 2i32.pow(self.combo(opr) as u32);
+        None
+    }
+    fn cdv(&mut self, opr: i32) -> Option<i32> {
+        self.r[2] = self.r[0] / 2i32.pow(self.combo(opr) as u32);
+        None
+    }
+}
+pub fn d17a(input: Vec<String>) -> String {
+    let mut m = D17Machine::new(input);
+    let ans = m.run();
+    ans.into_iter().map(|i|i.to_string()).collect::<Vec<_>>().join(",")
 }
 
 
