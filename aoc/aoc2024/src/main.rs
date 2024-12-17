@@ -26,7 +26,7 @@ fn main() {
         "14a" => d14a, "14b" => d14b,
         "15a" => d15a, "15b" => d15b,
         "16a" => d16a, "16b" => d16b,
-        "17a" => d17a,  
+        "17a" => d17a, "17b" => d17b,  
         _ => panic!("Unknown day")
     };
     println!("{}", res(input));

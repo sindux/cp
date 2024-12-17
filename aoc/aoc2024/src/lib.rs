@@ -1174,14 +1174,14 @@ pub fn d16b(input: Vec<String>) -> String {
 
 #[derive(Debug)]
 struct D17Machine {
-    r: [i32; 3],
+    r: [i64; 3],
     ip: usize,
-    code: Vec<i32>,
+    code: Vec<u8>,
 }
 impl D17Machine {
     fn new(input: Vec<String>) -> D17Machine {
         let reg_parser = Regex::new(r"Register (\w): (\d+)").unwrap();
-        let mut r = [0i32; 3];
+        let mut r = [0i64; 3];
         for i in 0..3 {
             let (_, [ri, v]) = reg_parser.captures(&input[0]).unwrap().extract();
             let reg = ri.as_bytes()[0] - b'A';
@@ -1196,7 +1196,13 @@ impl D17Machine {
         }
     }
 
-    fn run(&mut self) -> Vec<i32> {
+    fn reset(&mut self, a: i64) {
+        self.r.fill(0);
+        self.r[0]=a;
+        self.ip=0;
+    }
+
+    fn run(&mut self) -> Vec<u8> {
         let ops = [
             D17Machine::adv, 
             D17Machine::bxl,
@@ -1218,45 +1224,45 @@ impl D17Machine {
         ans
     }
 
-    fn combo(&self, opr: i32) -> i32 {
+    fn combo(&self, opr: u8) -> i64 {
         match opr {
-            0..=3 => opr,
+            0..=3 => opr as i64,
             4..6 => self.r[(opr - 4) as usize],
             _ => panic!("Unrecognized combo operand")
         }
     }
 
-    fn adv(&mut self, opr: i32) -> Option<i32> {
-        self.r[0] /= 2i32.pow(self.combo(opr) as u32);
+    fn adv(&mut self, opr: u8) -> Option<u8> {
+        self.r[0] /= 2i64.pow(self.combo(opr) as u32);
         None
     }
-    fn bxl(&mut self, opr: i32) -> Option<i32> {
-        self.r[1] ^= opr;
+    fn bxl(&mut self, opr: u8) -> Option<u8> {
+        self.r[1] ^= opr as i64;
         None
     }
-    fn bst(&mut self, opr: i32) -> Option<i32> {
+    fn bst(&mut self, opr: u8) -> Option<u8> {
         self.r[1] = self.combo(opr)%8;
         None
     }
-    fn jnz(&mut self, opr: i32) -> Option<i32> {
+    fn jnz(&mut self, opr: u8) -> Option<u8> {
         if self.r[0] != 0 {
             self.ip = opr as usize;
         }
         None
     }
-    fn bxc(&mut self, _: i32) -> Option<i32> {
+    fn bxc(&mut self, _: u8) -> Option<u8> {
         self.r[1] ^= self.r[2];
         None
     }
-    fn out(&mut self, opr: i32) -> Option<i32> {
-        Some(self.combo(opr)%8)
+    fn out(&mut self, opr: u8) -> Option<u8> {
+        Some((self.combo(opr)%8) as u8)
     }
-    fn bdv(&mut self, opr: i32) -> Option<i32> {
-        self.r[1] = self.r[0] / 2i32.pow(self.combo(opr) as u32);
+    fn bdv(&mut self, opr: u8) -> Option<u8> {
+        self.r[1] = self.r[0] / 2i64.pow(self.combo(opr) as u32);
         None
     }
-    fn cdv(&mut self, opr: i32) -> Option<i32> {
-        self.r[2] = self.r[0] / 2i32.pow(self.combo(opr) as u32);
+    fn cdv(&mut self, opr: u8) -> Option<u8> {
+        self.r[2] = self.r[0] / 2i64.pow(self.combo(opr) as u32);
         None
     }
 }
@@ -1266,6 +1272,29 @@ pub fn d17a(input: Vec<String>) -> String {
     ans.into_iter().map(|i|i.to_string()).collect::<Vec<_>>().join(",")
 }
 
+fn d17bgo(m: &mut D17Machine, bit: usize, ans: i64) -> Option<i64> {
+    if bit>=m.code.len() {
+        return Some(ans)
+    }
+    let totry = ans<<3;
+    for a in 0..=7 {
+        m.reset(totry | a);
+        let res = m.run();
+        let codeslice = &m.code[m.code.len()-bit-1..];
+        if codeslice == res {
+            let nextans = d17bgo(m, bit+1, totry|a);
+            if nextans.is_some() {
+                return nextans
+            }
+        }
+    }
+    None
+}
+pub fn d17b(input: Vec<String>) -> String {
+    let mut m = D17Machine::new(input);
+    let ans = d17bgo(&mut m, 0, 0);
+    ans.expect("No solution found").to_string()
+}
 
 #[cfg(test)]
 mod tests {
