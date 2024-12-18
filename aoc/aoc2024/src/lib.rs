@@ -1290,10 +1290,50 @@ fn d17bgo(m: &mut D17Machine, bit: usize, ans: i64) -> Option<i64> {
     }
     None
 }
+
 pub fn d17b(input: Vec<String>) -> String {
     let mut m = D17Machine::new(input);
     let ans = d17bgo(&mut m, 0, 0);
     ans.expect("No solution found").to_string()
+}
+
+fn d18parse(input: &[String]) -> Vec<Vec<u8>> {
+    let size = if input.len() < 50 { 7usize } else { 71 };
+    let take = if input.len() < 50 { 12 } else { 1024 };
+    let mut map = vec![vec![0; size]; size];
+    for l in &input[..take] {
+        let pos: Vec<_> = l.split(',').map(|p|p.parse::<usize>().unwrap()).collect();
+        map[pos[1]][pos[0]] = 1;
+    }
+    map
+}
+
+pub fn d18a(input: Vec<String>) -> String {
+    let map = d18parse(&input);
+    let mut q = VecDeque::new();
+    q.push_back((0,0,0));
+    let end = map.len();
+    let mut visited = vec![vec![false; end]; end];
+    visited[0][0] = true;
+    while let Some((y,x,d)) = q.pop_front() {
+        if y == end-1 && x == end-1 {
+            return d.to_string()
+        }
+        const DIRS: [(isize, isize); 4] = [(0,1),(0,-1),(1,0),(-1,0)];
+        for (dy,dx) in DIRS {
+            let ny = y as isize + dy;
+            let nx = x as isize + dx;
+            if ny>=0 && ny<end as isize && nx>=0 && nx<end as isize {
+                let ny = ny as usize;
+                let nx = nx as usize;
+                if map[ny][nx]==0 && !visited[ny][nx] {
+                    visited[ny][nx] = true;
+                    q.push_back((ny,nx,d+1));
+                }
+            }
+        }
+    }
+    unreachable!()
 }
 
 #[cfg(test)]
