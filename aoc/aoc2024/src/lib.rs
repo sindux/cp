@@ -1297,19 +1297,25 @@ pub fn d17b(input: Vec<String>) -> String {
     ans.expect("No solution found").to_string()
 }
 
-fn d18parse(input: &[String]) -> Vec<Vec<u8>> {
-    let size = if input.len() < 50 { 7usize } else { 71 };
-    let take = if input.len() < 50 { 12 } else { 1024 };
-    let mut map = vec![vec![0; size]; size];
-    for l in &input[..take] {
+fn d18parse(input: Vec<String>) -> Vec<(usize, usize)> {
+    input.into_iter().map(|l| {
         let pos: Vec<_> = l.split(',').map(|p|p.parse::<usize>().unwrap()).collect();
-        map[pos[1]][pos[0]] = 1;
+        (pos[1], pos[0])
+    }).collect()
+}
+
+fn d18makemap(bytes: &[(usize, usize)], take: usize) -> Vec<Vec<u8>> {
+    let size = if bytes.len() < 50 { 7usize } else { 71 };
+    let mut map = vec![vec![0; size]; size];
+    for &(y, x) in &bytes[..take] {
+        map[y][x]=1;
     }
     map
 }
 
-pub fn d18a(input: Vec<String>) -> String {
-    let map = d18parse(&input);
+fn d18(bytes: &[(usize, usize)], take: usize) -> Option<i32> {
+    let map = d18makemap(bytes, take);
+
     let mut q = VecDeque::new();
     q.push_back((0,0,0));
     let end = map.len();
@@ -1317,7 +1323,7 @@ pub fn d18a(input: Vec<String>) -> String {
     visited[0][0] = true;
     while let Some((y,x,d)) = q.pop_front() {
         if y == end-1 && x == end-1 {
-            return d.to_string()
+            return Some(d)
         }
         const DIRS: [(isize, isize); 4] = [(0,1),(0,-1),(1,0),(-1,0)];
         for (dy,dx) in DIRS {
@@ -1333,8 +1339,31 @@ pub fn d18a(input: Vec<String>) -> String {
             }
         }
     }
-    unreachable!()
+    None
 }
+
+pub fn d18a(input: Vec<String>) -> String {
+    let bytes = d18parse(input);
+    let take = if bytes.len() < 30 { 12 } else { 1024 };
+    d18(&bytes, take).unwrap().to_string()
+}
+
+pub fn d18b(input: Vec<String>) -> String {
+    let bytes = d18parse(input);
+    let mut l = 0;
+    let mut r = bytes.len() + 1;
+    while l < r {
+        let take = l + (r-l)/2;
+        let res = d18(&bytes, take);
+        if res.is_some() {
+            l = take+1;
+        } else {
+            r = take;
+        }
+    }
+    format!("{},{}", bytes[l-1].1, bytes[l-1].0)
+}
+
 
 #[cfg(test)]
 mod tests {
