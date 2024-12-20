@@ -1381,39 +1381,43 @@ fn d19parse(input: Vec<String>) -> (Trie<char>, Vec<Vec<char>>) {
     (t, designs)
 }
 
-fn d19feasible(cache: &mut HashMap<(usize, usize, char), bool>, root: &Trie<char>, node: &Trie<char>, design: &[char], idx: usize, level: usize, prevchar: char) -> bool {
+fn d19feasible(cache: &mut HashMap<(usize, usize, char), i64>, root: &Trie<char>, node: &Trie<char>, design: &[char], idx: usize, level: usize, prevchar: char) -> i64 {
     if let Some(m) = cache.get(&(idx, level, prevchar)) {
         return *m;
     }
     if idx >= design.len() {
-        return node.is_leaf
+        return if node.is_leaf { 1 } else { 0 }
     }
     let ch = design[idx];
     let node = node.children.get(&ch); 
     if node.is_none() {
-        cache.insert((idx, level, prevchar), false);
-        return false
+        cache.insert((idx, level, prevchar), 0);
+        return 0
     }
     let node = node.unwrap();
     // continue down the tree
-    if d19feasible(cache, root, node, design, idx+1, level+1, ch) {
-        cache.insert((idx, level, prevchar), true);
-        return true
-    }
+    let cont = d19feasible(cache, root, node, design, idx+1, level+1, ch);
     // or restart from root if we're at leaf
-    let mut res = false;
+    let mut res = 0;
     if node.is_leaf {
         res = d19feasible(cache, root, root, design, idx+1, 0, ' ');
     }
-    cache.insert((idx, level, prevchar), res);
-    res
+    cache.insert((idx, level, prevchar), cont+res);
+    cont+res
 }
 
 pub fn d19a(input: Vec<String>) -> String {
     let (ptrns, designs) = d19parse(input);
     designs.into_iter()
-        .filter(|d| d19feasible(&mut HashMap::new(), &ptrns, &ptrns, d, 0, 0, ' '))
+        .filter(|d| d19feasible(&mut HashMap::new(), &ptrns, &ptrns, d, 0, 0, ' ') > 0)
         .count().to_string()
+}
+
+pub fn d19b(input: Vec<String>) -> String {
+    let (ptrns, designs) = d19parse(input);
+    designs.into_iter()
+        .map(|d| d19feasible(&mut HashMap::new(), &ptrns, &ptrns, &d, 0, 0, ' '))
+        .sum::<i64>().to_string()
 }
 
 #[cfg(test)]
