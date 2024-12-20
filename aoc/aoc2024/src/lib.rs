@@ -40,6 +40,10 @@ fn vvc2str(grid: &[Vec<char>]) -> String {
 
 }
 
+fn ss2vs(sliceofstr: &[&str]) -> Vec<String> {
+    sliceofstr.iter().map(|&s|s.to_owned()).collect()
+}
+
 // region: day 1-10
 fn parsed1(input: Vec<String>) -> (Vec<i32>, Vec<i32>) {
     let input: Vec<(i32, i32)> = input.into_iter().map(|l|{
@@ -1377,33 +1381,38 @@ fn d19parse(input: Vec<String>) -> (Trie<char>, Vec<Vec<char>>) {
     (t, designs)
 }
 
-fn d19feasible(root: &Trie<char>, node: &Trie<char>, design: &[char]) -> bool {
-    println!("{design:?}");
-    if design.is_empty() {
+fn d19feasible(cache: &mut HashMap<(usize, usize, char), bool>, root: &Trie<char>, node: &Trie<char>, design: &[char], idx: usize, level: usize, prevchar: char) -> bool {
+    if let Some(m) = cache.get(&(idx, level, prevchar)) {
+        return *m;
+    }
+    if idx >= design.len() {
         return node.is_leaf
     }
-    let ch = design.first().unwrap();
-    let node = node.children.get(ch); 
+    let ch = design[idx];
+    let node = node.children.get(&ch); 
     if node.is_none() {
+        cache.insert((idx, level, prevchar), false);
         return false
     }
     let node = node.unwrap();
     // continue down the tree
-    if d19feasible(root, node, &design[1..]) {
+    if d19feasible(cache, root, node, design, idx+1, level+1, ch) {
+        cache.insert((idx, level, prevchar), true);
         return true
     }
     // or restart from root if we're at leaf
+    let mut res = false;
     if node.is_leaf {
-        return d19feasible(root, root, &design[1..])
+        res = d19feasible(cache, root, root, design, idx+1, 0, ' ');
     }
-    false
+    cache.insert((idx, level, prevchar), res);
+    res
 }
 
 pub fn d19a(input: Vec<String>) -> String {
     let (ptrns, designs) = d19parse(input);
     designs.into_iter()
-        // .inspect(|f|println!("{f:?} {}", f.len()))
-        .filter(|d| d19feasible(&ptrns, &ptrns, d))
+        .filter(|d| d19feasible(&mut HashMap::new(), &ptrns, &ptrns, d, 0, 0, ' '))
         .count().to_string()
 }
 
