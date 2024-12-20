@@ -1,9 +1,11 @@
-
 use std::{cmp::{Ordering, Reverse}, collections::{BinaryHeap, HashMap, HashSet, VecDeque}, fmt::Debug, fs, io::{self, BufRead}, str::FromStr};
 
 use plotters::{coord::Shift, prelude::*};
 use rayon::iter::{IntoParallelIterator, ParallelIterator};
 use regex::Regex;
+
+mod trie;
+use trie::Trie;
 
 pub fn read(f: String) -> Vec<String>
 {
@@ -1364,6 +1366,46 @@ pub fn d18b(input: Vec<String>) -> String {
     format!("{},{}", bytes[l-1].1, bytes[l-1].0)
 }
 
+fn d19parse(input: Vec<String>) -> (Trie<char>, Vec<Vec<char>>) {
+    let mut t: Trie<char> = Trie::new();
+    for i in input[0].split(", ") {
+        t.push(&i.chars().collect::<Vec<_>>());
+    }
+    let designs = input.into_iter().skip(2).map(|l| {
+        l.chars().collect()
+    }).collect();
+    (t, designs)
+}
+
+fn d19feasible(root: &Trie<char>, node: &Trie<char>, design: &[char]) -> bool {
+    println!("{design:?}");
+    if design.is_empty() {
+        return node.is_leaf
+    }
+    let ch = design.first().unwrap();
+    let node = node.children.get(ch); 
+    if node.is_none() {
+        return false
+    }
+    let node = node.unwrap();
+    // continue down the tree
+    if d19feasible(root, node, &design[1..]) {
+        return true
+    }
+    // or restart from root if we're at leaf
+    if node.is_leaf {
+        return d19feasible(root, root, &design[1..])
+    }
+    false
+}
+
+pub fn d19a(input: Vec<String>) -> String {
+    let (ptrns, designs) = d19parse(input);
+    designs.into_iter()
+        // .inspect(|f|println!("{f:?} {}", f.len()))
+        .filter(|d| d19feasible(&ptrns, &ptrns, d))
+        .count().to_string()
+}
 
 #[cfg(test)]
 mod tests {
