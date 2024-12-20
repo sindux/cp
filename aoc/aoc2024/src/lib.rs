@@ -1420,6 +1420,61 @@ pub fn d19b(input: Vec<String>) -> String {
         .sum::<i64>().to_string()
 }
 
+pub fn d20a(input: Vec<String>) -> String {
+    let grid = vs2vvc(input);
+    let h= grid.len() as isize;
+    let w = grid[0].len() as isize;
+    let mut dist = vec![vec![i32::MAX; w as usize]; w as usize];
+    let start = vvc_find(&grid, 'E');
+    let mut q = VecDeque::new();
+    q.push_back((start.0, start.1, 0));
+    dist[start.0][start.1]=0;
+    while let Some((y, x, d)) = q.pop_front() {
+        const DIRS: [(isize, isize); 4] = [(0,1), (0,-1), (-1,0), (1,0)];
+        for (dy, dx) in &DIRS {
+            let ny = y as isize + *dy;
+            let nx = x as isize + *dx;
+            if ny>=0 && ny < h && nx >= 0 && nx < w {
+                let ny = ny as usize;
+                let nx = nx as usize;
+                if grid[ny][nx]!='#' && dist[ny][nx] > d+1 {
+                    dist[ny][nx]=d+1;
+                    q.push_back((ny,nx,d+1));
+                }
+            }
+        }
+    }
+
+    let mut cheats = vec![vec![i32::MAX; w as usize]; h as usize];
+    for y in 1..h as usize-1 {
+        for x in 1..w as usize-1 {
+            if grid[y][x]=='#' {
+                let is_hor = grid[y-1][x]!='#' && grid[y+1][x]!='#';
+                let is_ver = grid[y][x-1]!='#' && grid[y][x+1]!='#';
+                assert!(!(is_hor && is_ver), "{y} {x}");
+                if is_hor {
+                    cheats[y][x]=(dist[y-1][x]-dist[y+1][x]).abs() - 2;
+                } else if is_ver {
+                    cheats[y][x]=(dist[y][x-1]-dist[y][x+1]).abs() - 2;
+                }
+
+            }
+        }
+    }
+    let mut cnt: HashMap<i32, i32> = HashMap::new();
+    for y in cheats {
+        for x in y {
+            if x!= i32::MAX {
+                *cnt.entry(x).or_default()+=1;
+            }
+        }
+    }
+    let over100 = cnt.into_iter().filter_map(
+        |(k,v)| if h<20 || k>=100 { Some(v) } else {None})
+        .sum::<i32>();
+    over100.to_string()    
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
