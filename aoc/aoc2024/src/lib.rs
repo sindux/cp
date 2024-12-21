@@ -1420,12 +1420,10 @@ pub fn d19b(input: Vec<String>) -> String {
         .sum::<i64>().to_string()
 }
 
-pub fn d20a(input: Vec<String>) -> String {
-    let grid = vs2vvc(input);
+fn d20bfs(grid: &[Vec<char>], start: (usize, usize)) -> Vec<Vec<i32>> {
     let h= grid.len() as isize;
     let w = grid[0].len() as isize;
     let mut dist = vec![vec![i32::MAX; w as usize]; w as usize];
-    let start = vvc_find(&grid, 'E');
     let mut q = VecDeque::new();
     q.push_back((start.0, start.1, 0));
     dist[start.0][start.1]=0;
@@ -1444,35 +1442,61 @@ pub fn d20a(input: Vec<String>) -> String {
             }
         }
     }
+    dist
+}
 
-    let mut cheats = vec![vec![i32::MAX; w as usize]; h as usize];
+fn d20tryimprove(base: &[Vec<i32>], (y,x): (usize, usize), max_t: usize) -> HashMap<i32, i32> {
+    let mut faster = HashMap::new();
+    for ny in y.saturating_sub(max_t)..=(y+max_t).min(base.len()-1) {
+        for nx in x.saturating_sub(max_t)..=(x+max_t).min(base[0].len()-1) {
+            if base[ny][nx] == i32::MAX { continue }
+            let origt = base[y][x]-base[ny][nx];
+            if origt<=0 { continue }  // only to the direction to end (t_target < t_start)
+            let disty = (ny as isize - y as isize).abs();
+            let distx = (nx as isize - x as isize).abs();
+            let dist = (disty + distx) as i32;
+            if dist <= max_t as i32 && dist < origt {
+                *faster.entry(origt-dist).or_default()+=1;
+            }
+        }
+    }
+    faster    
+}
+
+fn d20(input: Vec<String>, max_t: usize, threshold: i32) -> String {
+    let grid = vs2vvc(input);
+    let h= grid.len() as isize;
+    let w = grid[0].len() as isize;
+
+    let start = vvc_find(&grid, 'E');
+    let base = d20bfs(&grid, start);
+
+    let mut cnt: HashMap<i32, i32> = HashMap::new();
     for y in 1..h as usize-1 {
         for x in 1..w as usize-1 {
-            if grid[y][x]=='#' {
-                let is_hor = grid[y-1][x]!='#' && grid[y+1][x]!='#';
-                let is_ver = grid[y][x-1]!='#' && grid[y][x+1]!='#';
-                assert!(!(is_hor && is_ver), "{y} {x}");
-                if is_hor {
-                    cheats[y][x]=(dist[y-1][x]-dist[y+1][x]).abs() - 2;
-                } else if is_ver {
-                    cheats[y][x]=(dist[y][x-1]-dist[y][x+1]).abs() - 2;
+            if grid[y][x]!='#' {
+                let curres = d20tryimprove(&base, (y,x), max_t);
+                for (t, tcnt) in curres {
+                    *cnt.entry(t).or_default()+=tcnt;
                 }
+            }
+        }
+    }
 
-            }
-        }
-    }
-    let mut cnt: HashMap<i32, i32> = HashMap::new();
-    for y in cheats {
-        for x in y {
-            if x!= i32::MAX {
-                *cnt.entry(x).or_default()+=1;
-            }
-        }
-    }
     let over100 = cnt.into_iter().filter_map(
-        |(k,v)| if h<20 || k>=100 { Some(v) } else {None})
+        |(k,v)| if k>=threshold { Some(v) } else {None})
         .sum::<i32>();
     over100.to_string()    
+}
+
+pub fn d20a(input: Vec<String>) -> String {
+    let istest = input.len() < 20;
+    d20(input, 2, if istest { 0} else { 100 })
+}
+
+pub fn d20b(input: Vec<String>) -> String {
+    let istest = input.len() < 20;
+    d20(input, 20, if istest {50} else {100})
 }
 
 #[cfg(test)]
