@@ -1499,6 +1499,18 @@ pub fn d20b(input: Vec<String>) -> String {
     d20(input, 20, if istest {50} else {100})
 }
 
+fn d22next(n: i64) -> i64 {
+    const MOD:i64 = 16777216;
+    let n = (n ^ n*64) % MOD;
+    let n = (n ^ n/32) % MOD;
+    (n ^ n*2048) % MOD
+}
+
+pub fn d22a(input: Vec<String>) -> String {
+    input.into_iter().map(|l|l.parse::<i64>().unwrap())
+        .map(|l| (0..2000).fold(l, |n,_|d22next(n))).sum::<i64>().to_string()
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
