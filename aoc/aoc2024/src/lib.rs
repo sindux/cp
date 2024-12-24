@@ -22,6 +22,11 @@ fn vs2vvc(grid: Vec<String>) -> Vec<Vec<char>> {
         .collect()
 }
 
+fn ss2vvc(grid: &[&str]) -> Vec<Vec<char>> {
+    grid.iter().map(|l|l.chars().collect())
+        .collect()
+}
+
 fn vvc_find(grid: &[Vec<char>], what: char) -> (usize, usize) {
     for (y, row) in grid.iter().enumerate() {
         for (x, ch) in row.iter().enumerate() {
@@ -1497,6 +1502,147 @@ pub fn d20a(input: Vec<String>) -> String {
 pub fn d20b(input: Vec<String>) -> String {
     let istest = input.len() < 20;
     d20(input, 20, if istest {50} else {100})
+}
+
+
+fn d21parseedges(layout: &str) -> HashMap<char, Vec<(char, char)>> {
+    let layout: Vec<_> = ss2vvc(&layout.lines().collect::<Vec<_>>());
+    let mut edges = HashMap::new();
+    let h = layout.len();
+    let w = layout[0].len();
+    const DY: isize = 2;
+    const DX: isize = 4;
+    const DIRS: [(isize, isize, char);4] = [(0,DX,'>'), (0,-DX,'<'), (-DY,0,'^'), (DY,0,'v')];
+    for y in (1..layout.len()).step_by(DY as usize) {
+        for x in (2..layout[y].len()).step_by(DX as usize) {
+            for dir in DIRS {
+                let ny = y as isize+dir.0;
+                let nx = x as isize+dir.1;
+                println!("{y} {x} {ny} {nx} {h} {w}");
+                if ny>=0 && ny < h as isize && nx>=0 && nx<w as isize {
+                    let ny = ny as usize;
+                    let nx = nx as usize;
+                    let from = layout[y][x];
+                    let to = layout[ny][nx];
+                    if from.is_ascii_whitespace() || to.is_ascii_whitespace() { continue }
+                    edges.entry(from).or_insert_with(Vec::new).push((to,dir.2));
+                }
+            }
+        }
+    }
+    edges
+}
+
+fn d21floyd_warshall(edges: HashMap<char, Vec<(char, char)>>) -> HashMap<(char, char), Vec<char>> {
+    let nodes: Vec<_> = edges.keys().collect(); 
+    let mut dists = HashMap::new();
+    let mut prevs = HashMap::new();
+    for (&from, tos) in &edges {
+        for &(to, how) in tos {
+            dists.insert((from, to), 1);
+            prevs.insert((from, to), from);
+        }
+    }
+    for &&k in &nodes {
+        for &&i in &nodes {
+            for &&j in &nodes {
+                if *dists.get(&(i,j)).unwrap_or(&i32::MAX) > 
+                    (*dists.get(&(i,k)).unwrap_or(&i32::MAX)).saturating_add(
+                    *dists.get(&(k,j)).unwrap_or(&i32::MAX)) {
+                    dists.insert((i,j), dists.get(&(i,k)).unwrap() +
+                        dists.get(&(k,j)).unwrap());
+                    prevs.insert((i,j), *prevs.get(&(k,j)).unwrap());
+                }
+            }
+        }
+    }
+
+    fn path(edges: &HashMap<char, Vec<(char, char)>>, prevs: &HashMap<(char, char), char>, from: char, mut to: char) -> Vec<char> {
+        match prevs.get(&(from, to)) {
+            None => vec![],
+            Some(_) => {
+                let mut ans = VecDeque::new();
+                ans.push_back('A');
+                while from != to {
+                    let prev2 = *prevs.get(&(from,to)).unwrap();
+                    let tohow = edges.get(&prev2).unwrap().iter()
+                        .find_map(|t| if t.0==to { Some(t.1) } else {None}).unwrap();
+                    ans.push_front(tohow);
+                    to = prev2;
+                }
+                ans.into_iter().collect()
+            }
+        }
+    }
+
+
+    let mut paths = HashMap::new();
+    for &&from in &nodes {
+        for &&to in &nodes {
+            let p = path(&edges, &prevs, from, to);
+            paths.insert((from, to), p);
+        }
+    }
+
+    paths
+}
+
+fn d21numkeypad() -> HashMap<(char, char), Vec<char>> {
+    let edges = d21parseedges("\
++---+---+---+
+| 7 | 8 | 9 |
++---+---+---+
+| 4 | 5 | 6 |
++---+---+---+
+| 1 | 2 | 3 |
++---+---+---+
+    | 0 | A |
+    +---+---+");
+    d21floyd_warshall(edges)
+}
+
+fn d21dirkeypad() -> HashMap<(char, char), Vec<char>> {
+    let edges = d21parseedges("\
++   +---+---+
+    | ^ | A |
++---+---+---+
+| < | v | > |
++---+---+---+");
+    d21floyd_warshall(edges)
+}
+
+fn d21route(target: Vec<char>, edges: &HashMap<(char, char), Vec<char>>) -> Vec<char> {
+    let mut curpos = 'A';
+    let mut ans = vec![];
+    for nextpos in target {
+        let how = edges.get(&(curpos, nextpos)).unwrap();
+        for &h in how {
+            ans.push(h);
+        }
+        curpos = nextpos;
+    }
+    ans
+}
+
+fn d21run(target: &str, numkp: &HashMap<(char, char), Vec<char>>, dirkp: &HashMap<(char, char), Vec<char>>) -> String {
+    let target: Vec<_> = target.chars().collect();
+    let mut topress = d21route(target, &numkp);
+    println!("{}", topress.iter().collect::<String>());
+    for _ in 0..2 {
+        topress = d21route(topress, &dirkp);
+        println!("{}", topress.iter().collect::<String>());
+    }
+    topress.into_iter().collect()
+} 
+
+pub fn d21a(input: Vec<String>) -> String {
+    // floyd_warshall(HashMap::from(value))
+    let numkp = d21numkeypad();
+    let dirkp = d21dirkeypad();
+
+    println!("{:?}",d21run("029A", &numkp, &dirkp));
+
+    "".to_string()
 }
 
 fn d22next(n: i64) -> i64 {
