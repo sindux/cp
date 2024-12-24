@@ -1501,14 +1501,42 @@ pub fn d20b(input: Vec<String>) -> String {
 
 fn d22next(n: i64) -> i64 {
     const MOD:i64 = 16777216;
-    let n = (n ^ n*64) % MOD;
-    let n = (n ^ n/32) % MOD;
-    (n ^ n*2048) % MOD
+    let n = (n ^ (n*64)) % MOD;
+    let n = (n ^ (n/32)) % MOD;
+    (n ^ (n*2048)) % MOD
 }
 
 pub fn d22a(input: Vec<String>) -> String {
     input.into_iter().map(|l|l.parse::<i64>().unwrap())
         .map(|l| (0..2000).fold(l, |n,_|d22next(n))).sum::<i64>().to_string()
+}
+
+pub fn d22b(input: Vec<String>) -> String {
+    let nums: Vec<_> = input.into_iter().map(|l|l.parse::<i64>().unwrap())
+        .map(|l| (0..2000).scan(l, |n,_| {
+            let next = d22next(*n);
+            let diff = next%10 - *n%10;
+            *n = next;
+            Some(((next%10) as i8, diff as i8))
+        }).collect::<Vec<_>>()).collect();
+    let mut changes = vec![HashMap::new();nums.len()];
+    for (i,n) in nums.into_iter().enumerate() {
+        for nwindow in n.windows(4) {
+            let key = (nwindow[0].1, nwindow[1].1, nwindow[2].1, nwindow[3].1);
+            changes[i].entry(key).or_insert(nwindow[3].0);
+        }
+    }
+
+    let mut cntkeys = HashMap::new();
+    for chg_cnt in &changes {
+        for (k,v) in chg_cnt {
+            *cntkeys.entry(*k).or_insert(0)+=(*v) as i32;
+        }
+    }
+    let mut cntkeys: Vec<_> = cntkeys.into_iter().collect();
+    cntkeys.sort_unstable_by_key(|e|-e.1);
+    
+    cntkeys.first().unwrap().1.to_string()
 }
 
 #[cfg(test)]
