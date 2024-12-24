@@ -1708,6 +1708,33 @@ pub fn d22b(input: Vec<String>) -> String {
     cntkeys.first().unwrap().1.to_string()
 }
 
+fn d23parse(input: Vec<String>) -> HashMap<String, Vec<String>> {
+    let mut edges: HashMap<String, Vec<String>> = HashMap::new();
+    input.into_iter().for_each(|l| {
+        let edge: Vec<_> = l.split('-').collect();
+        edges.entry(edge[0].to_string()).or_default().push(edge[1].to_string());
+        edges.entry(edge[1].to_string()).or_default().push(edge[0].to_string());
+    });
+    edges
+}
+pub fn d23a(input: Vec<String>) -> String {
+    let edges = d23parse(input);
+    let mut ans = 0;
+    for (n1, n2s) in &edges {
+        for n2 in n2s {
+            if n2 <= n1 { continue }
+            for n3 in edges.get(n2).unwrap_or(&vec![]) {
+                if n3 <= n1 || n3 <= n2 { continue }
+                if !n2s.contains(n3) { continue }  // must be in n1's edges too
+                if n1.starts_with("t") || n2.starts_with("t") || n3.starts_with("t") {
+                    ans+=1;
+                }
+            }
+        }
+    }
+    ans.to_string()
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
