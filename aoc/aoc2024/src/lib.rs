@@ -1033,70 +1033,93 @@ pub fn d15a(input: Vec<String>) -> String {
     d15calcpos(&maps).to_string()
 }
 
-fn d15bmove(maps: &mut [Vec<char>], mut ry: isize, rx: isize, dy: isize, dx: isize) -> (isize, isize) {
+fn d15bmove(maps: &mut [Vec<char>], ry: isize, rx: isize, dy: isize, dx: isize) -> (isize, isize) {
     assert_eq!(dx, 0, "Vertical move");
-    fn find_space(maps: &[Vec<char>], mut ry: isize, rx: isize, dy: isize) -> Option<(isize, isize, isize)> {
-        let h = maps.len() as isize; 
-        ry+=dy;
-        if maps[ry as usize][rx as usize]=='.' {
-            return Some((ry,rx,rx));
-        } else if maps[ry as usize][rx as usize]=='#' {
-            return None;
-        }
-        assert!("[]".contains(maps[ry as usize][rx as usize]));
-        let mut left = rx;
-        let mut right = rx+1;
-        if maps[ry as usize][rx as usize]==']' {
-            left-=1;
-            right-=1;
-        }
+    fn get_block_x(maps: &[Vec<char>], y: isize, x: isize) -> Option<isize> {
+        let piece = maps[y as usize][x as usize];
+        if piece=='[' { Some(x) } 
+        else if piece==']' { Some(x - 1) }
+        else { None }
+    }
+    fn can_move_block_vert(maps: &[Vec<char>], y: isize, x: isize, dy: isize) -> bool {
+        assert!(maps[y as usize][x as usize]=='[');
+        let ny = y + dy;
+        if ny < 0 { return false }
+        let ny = ny as usize;
+        "[].".contains(maps[ny][x as usize])
+    }
+
+    fn collect_moved_blocks(maps: &[Vec<char>], mut ry: isize, rx: isize, dy: isize) -> Vec<(isize, isize)> {
         ry+=dy;
 
-        //        [][]  [][][]
-        //  [][]  [][]   [][]    []     []
-        //   []    []     []     []    [] 
-        while ry>=0 && ry < h {
-            if maps[ry as usize][left as usize]==']' {
-                left-=1;
-                right+=1;
-            }
-            if (left..=right).any(|x|maps[ry as usize][x as usize]=='#') {
-                return None
-            } else if (left..=right).all(|x|maps[ry as usize][x as usize]=='.') {
-                return Some((ry, left, right))
-            }
-            ry+=dy;
+        let blockpos = get_block_x(maps, ry, rx);
+        if blockpos.is_none() {
+            return vec![];
         }
-        unreachable!();
-    }
-    if let Some((mut ty, mut left, mut right)) = find_space(maps, ry, rx, dy) {
-        let block_moved = left < right;
-        // shift all from ry,rx to ty,left-right
-        loop {
-            for x in left..=right {
-                maps[ty as usize][x as usize] = maps[(ty-dy) as usize][x as usize];
-            }
-            ty-=dy;
-            if maps[ty as usize][left as usize]=='.' {
-                left+=1;
-                right-=1;
-            }
-            if ty==ry {
-                maps[ty as usize][rx as usize]='.';
-                if block_moved {
-                    let leftside = maps[(ty+dy+dy) as usize][rx as usize]=='[';
-                    if leftside {
-                        maps[(ty+dy) as usize][(rx+1) as usize]='.';
-                    } else {
-                        maps[(ty+dy) as usize][(rx-1) as usize]='.';
+        let mut blocks = vec![];
+        let mut q = VecDeque::new();
+        let blockpos = blockpos.unwrap();
+        if can_move_block_vert(maps, ry, blockpos, dy) {
+            blocks.push((ry, blockpos));
+            q.push_back((ry, blockpos));
+
+        } else {
+            return vec![];
+        }
+
+        //                                     [][][]
+        //        [][]  [][][]                 []  []
+        //  [][]  [][]   [][]    []     []      [][]
+        //   []    []     []     []    []        []
+        while let Some((py, px)) = q.pop_front() {
+            let y = py+dy;
+            let mut queued = HashSet::new();
+            for x in px..=px+1 {
+                let piece = maps[y as usize][x as usize];
+                if piece == '#' { return vec![] }                
+                if let Some(blockpos) = get_block_x(maps, y, x) {
+                    if queued.contains(&(y, blockpos)) {
+                        continue
+                    }
+                    queued.insert((y, blockpos));
+                    if can_move_block_vert(maps, y, blockpos, dy) {
+                        blocks.push((y, blockpos));
+                        q.push_back((y, blockpos));
                     }
                 }
-                ry+=dy;
-                break
             }
         }
+        blocks
     }
-    (ry, rx)
+
+    fn can_move(maps: &[Vec<char>], y: isize, x: isize, dy: isize) -> bool {
+        let ny = y + dy;
+        ny >= 0 && ny < maps.len() as isize && maps[ny as usize][x as usize]=='.'
+    }
+
+    if can_move(maps, ry, rx, dy) {
+        return (ry+dy, rx)
+    }
+    let blocks_to_move = collect_moved_blocks(maps, ry, rx, dy);
+    println!("{blocks_to_move:?}");
+    for (y, x) in &blocks_to_move {
+        let ny = (y + dy) as usize;
+        let x = *x as usize;
+        let y = *y as usize;
+        for dx in 0usize..=1 {
+            let nx=x+dx;
+            maps[ny][nx]=maps[y][nx];
+            maps[y][nx] = '.';
+        }
+    }
+
+    if blocks_to_move.is_empty() { 
+        (ry, rx) 
+    } else {
+        maps[(ry+dy) as usize][rx as usize]='@';
+        maps[ry as usize][rx as usize]='.';
+        (ry+dy, rx) 
+    }
 }
 
 pub fn d15b(input: Vec<String>) -> String {
@@ -1705,4 +1728,55 @@ mod tests {
             assert_eq!(expected.to_string(), result, "{}", infile);
         }
     }
+
+    fn ss2vs(sliceofstr: &[&str]) -> Vec<String> {
+        sliceofstr.iter().map(|&s|s.to_owned()).collect()
+    }
+
+    #[test]
+    fn test_d15b() {
+        let mut maps = vs2vvc(ss2vs(&[
+            ".....@....",
+            "..##[]##..",
+            "..#[][]#..",
+            "..[]..[]..",
+            ".#..##..#."
+        ]));
+
+        let expected = vs2vvc(ss2vs(&[
+            "..........",
+            "..##.@##..",
+            "..#.[].#..",
+            "...[][]...",
+            ".#[]##[]#."
+        ]));
+
+        d15bmove(&mut maps, 0, 4, 1, 0);
+        assert_eq!(vvc2str(&expected), vvc2str(&maps));
+    }
+
+    #[test]
+    fn test_d15b2() {
+        let mut maps = vs2vvc(ss2vs(&[
+            ".....@....",
+            "..##[]##..",
+            "..#[][]#..",
+            "..[]..[]..",
+            "..[][][]..",
+            ".#..##..#."
+        ]));
+
+        let expected = vs2vvc(ss2vs(&[
+            "..........",
+            "..##.@##..",
+            "..#.[].#..",
+            "...[][]...",
+            "..[][][]..",
+            ".#[]##[]#."
+        ]));
+
+        d15bmove(&mut maps, 0, 4, 1, 0);
+        assert_eq!(vvc2str(&expected), vvc2str(&maps));
+    }
+
 }
