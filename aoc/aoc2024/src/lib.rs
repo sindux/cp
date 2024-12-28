@@ -1717,23 +1717,71 @@ fn d23parse(input: Vec<String>) -> HashMap<String, Vec<String>> {
     });
     edges
 }
-pub fn d23a(input: Vec<String>) -> String {
-    let edges = d23parse(input);
-    let mut ans = 0;
-    for (n1, n2s) in &edges {
-        for n2 in n2s {
-            if n2 <= n1 { continue }
-            for n3 in edges.get(n2).unwrap_or(&vec![]) {
-                if n3 <= n1 || n3 <= n2 { continue }
-                if !n2s.contains(n3) { continue }  // must be in n1's edges too
-                if n1.starts_with("t") || n2.starts_with("t") || n3.starts_with("t") {
-                    ans+=1;
-                }
+
+fn d23search<F>(edges: &HashMap<String, Vec<String>>, maxdepth: usize, depth: usize, 
+    paths: &mut Vec<String>, solfound: &mut F) where F: FnMut(&Vec<String>) {
+
+    if depth == maxdepth {
+        if paths.iter().any(|n|n.starts_with("t")) {
+            solfound(paths);
+        }
+        return
+    }
+    let mut found_next = false;
+    let root: Vec<String>;
+    let next_nodes= if paths.is_empty() {
+        root = edges.keys().cloned().collect();
+        Some(&root)
+    } else {
+        edges.get(paths.last().unwrap())
+    };
+    if let Some(next_nodes) = next_nodes {
+        // let n = next_nodes.first().unwrap();
+        for n in next_nodes {
+            // compare to all prev nodes, not visited yet & must have an edge to that node
+            let ok = paths.iter().all(|prev_node| {
+                let is_visited = n != prev_node;
+                let has_edge_from_prev_nodes = edges.get(prev_node).is_some_and(|prev_node_edges|prev_node_edges.contains(n));
+                is_visited & has_edge_from_prev_nodes
+            });
+            if ok {
+                found_next = true;
+                paths.push(n.to_string());
+                d23search(edges, maxdepth, depth+1, paths, solfound);
+                paths.pop();
             }
         }
     }
-    ans.to_string()
+    if !found_next && paths.iter().any(|n|n.starts_with("t")) {
+        solfound(paths);
+    }
 }
+
+pub fn d23a(input: Vec<String>) -> String {
+    let edges = d23parse(input);
+    let mut ans = HashSet::new();
+    d23search(&edges, 3, 0, &mut vec![], &mut |p: &Vec<String>| {
+        println!("{p:?}");
+        if p.len()!= 3 { return }
+        let mut p = p.clone();
+        p.sort();
+        ans.insert(p.join("."));
+    });
+    ans.len().to_string()
+}
+
+pub fn d23b(input: Vec<String>) -> String {
+    let edges = d23parse(input);
+    let mut ans = vec![];
+    d23search(&edges, edges.len(), 0, &mut vec![], &mut |p: &Vec<String>| {
+        if p.len() > ans.len() {
+            println!("{p:?}");
+            ans = p.clone();
+        }
+    });
+    ans.join(",")
+}
+
 
 #[cfg(test)]
 mod tests {
