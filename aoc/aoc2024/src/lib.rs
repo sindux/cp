@@ -1722,9 +1722,7 @@ fn d23search<F>(edges: &HashMap<String, Vec<String>>, maxdepth: usize, depth: us
     paths: &mut Vec<String>, solfound: &mut F) where F: FnMut(&Vec<String>) {
 
     if depth == maxdepth {
-        if paths.iter().any(|n|n.starts_with("t")) {
-            solfound(paths);
-        }
+        solfound(paths);
         return
     }
     let mut found_next = false;
@@ -1740,9 +1738,9 @@ fn d23search<F>(edges: &HashMap<String, Vec<String>>, maxdepth: usize, depth: us
         for n in next_nodes {
             // compare to all prev nodes, not visited yet & must have an edge to that node
             let ok = paths.iter().all(|prev_node| {
-                let is_visited = n != prev_node;
+                let is_sorted = n > prev_node;
                 let has_edge_from_prev_nodes = edges.get(prev_node).is_some_and(|prev_node_edges|prev_node_edges.contains(n));
-                is_visited & has_edge_from_prev_nodes
+                is_sorted & has_edge_from_prev_nodes
             });
             if ok {
                 found_next = true;
@@ -1752,7 +1750,7 @@ fn d23search<F>(edges: &HashMap<String, Vec<String>>, maxdepth: usize, depth: us
             }
         }
     }
-    if !found_next && paths.iter().any(|n|n.starts_with("t")) {
+    if !found_next {
         solfound(paths);
     }
 }
@@ -1761,8 +1759,9 @@ pub fn d23a(input: Vec<String>) -> String {
     let edges = d23parse(input);
     let mut ans = HashSet::new();
     d23search(&edges, 3, 0, &mut vec![], &mut |p: &Vec<String>| {
-        println!("{p:?}");
-        if p.len()!= 3 { return }
+        if p.len()!= 3 || !p.iter().any(|n|n.starts_with("t")) {
+            return 
+        }
         let mut p = p.clone();
         p.sort();
         ans.insert(p.join("."));
@@ -1775,7 +1774,6 @@ pub fn d23b(input: Vec<String>) -> String {
     let mut ans = vec![];
     d23search(&edges, edges.len(), 0, &mut vec![], &mut |p: &Vec<String>| {
         if p.len() > ans.len() {
-            println!("{p:?}");
             ans = p.clone();
         }
     });
