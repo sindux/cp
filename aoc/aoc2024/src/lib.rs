@@ -1781,6 +1781,105 @@ pub fn d23b(input: Vec<String>) -> String {
 }
 
 
+#[derive(Debug)]
+enum D24Ops {
+    AND, OR, XOR, VAL(i32)
+}
+
+impl std::str::FromStr for D24Ops {
+    type Err = String;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s {
+            "AND" => Ok(D24Ops::AND),
+            "OR" => Ok(D24Ops::OR),
+            "XOR" => Ok(D24Ops::XOR),
+            _ => Err(format!("'{}' is not valid", s)),
+        }
+    }
+}
+
+fn d24parse(input: Vec<String>) -> (Vec<(String, D24Ops)>, HashMap<usize, Vec<usize>>, Vec<usize>) {
+    let mut parseinit = true;
+    let mut nodesmap = HashMap::new();
+    let mut nodes = vec![];
+    let mut adjs = HashMap::new();
+    let gateparse = Regex::new(r"(\w+) (\w+) (\w+) -> (\w+)").unwrap();
+
+    let mut try_add_node = |node: &str, nodetype: Option<D24Ops>| -> usize {
+        let newidx = nodesmap.len();
+        let idx = *nodesmap.entry(node.to_string()).or_insert(newidx);
+        if idx >= nodes.len() {
+            nodes.push(nodetype);
+        } else if nodetype.is_some() {
+            nodes[idx]=nodetype;
+        }
+        idx
+    };
+
+    for line in input {
+        if line.is_empty() {
+            parseinit = false;
+            continue
+        }
+        if parseinit {
+            let nodeval: Vec<_> = line.split(": ").collect();
+            try_add_node(nodeval[0], 
+                Some(D24Ops::VAL(nodeval[1].parse().unwrap())));
+        } else {
+            let (_, [i0, op, i1, o]) = gateparse.captures(&line).unwrap().extract();
+            let i0 = try_add_node(i0, None);
+            let i1 = try_add_node(i1, None);
+            let o = try_add_node(o, Some(op.parse().unwrap()));
+            
+            let child = vec![i0, i1];
+            let is_ok = adjs.insert(o, child);
+            assert!(is_ok.is_none());
+        }
+    }
+    assert!(nodes.iter().all(|n|n.is_some()));
+
+    let mut in_edges = vec![0;nodes.len()];
+    for (_, tgts) in &adjs {
+        for tgt in tgts {
+            in_edges[*tgt]+=1;
+        }
+    }
+    let roots: Vec<_> = in_edges.into_iter().enumerate().filter_map(|(idx,cnt)| if cnt==0 {Some(idx)} else {None}).collect();
+
+    let mut nodesmap: HashMap<_, _> = nodesmap.into_iter().map(|(name,idx)| (idx,name)).collect();
+
+    let nodes: Vec<_> = nodes.into_iter().enumerate().map(
+        |(idx, n)| (nodesmap.remove(&idx).unwrap(), n.unwrap())).collect();
+
+    (nodes, adjs, roots)
+}
+
+fn d24eval(node: usize, nodes: &[(String, D24Ops)], adjs:&HashMap<usize, Vec<usize>>) -> i32 {
+    match nodes[node].1 {
+        D24Ops::VAL(v) => v,
+        D24Ops::AND => d24eval(adjs.get(&node).unwrap()[0], nodes, adjs) & d24eval(adjs.get(&node).unwrap()[1], nodes, adjs),
+        D24Ops::OR => d24eval(adjs.get(&node).unwrap()[0], nodes, adjs) | d24eval(adjs.get(&node).unwrap()[1], nodes, adjs),
+        D24Ops::XOR => d24eval(adjs.get(&node).unwrap()[0], nodes, adjs) ^ d24eval(adjs.get(&node).unwrap()[1], nodes, adjs),
+    }
+}
+
+pub fn d24a(input: Vec<String>) -> String {
+    let (nodes, adjs, roots) = d24parse(input);
+    let mut ans = vec![0; roots.len()];
+    for r in roots {
+        let nodename = &nodes[r].0;
+        let regno = nodename[1..].parse::<usize>().unwrap();
+        ans[regno] = d24eval(r, &nodes, &adjs);
+    }
+    let mut finalans = 0i64;
+    for i in ans.into_iter().rev() {
+        finalans <<= 1;
+        finalans += i as i64;
+    }
+    finalans.to_string()
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
