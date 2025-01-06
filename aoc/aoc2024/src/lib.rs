@@ -1880,6 +1880,36 @@ pub fn d24a(input: Vec<String>) -> String {
     finalans.to_string()
 }
 
+fn d24get(prefix: &str, nodes: &[(String, D24Ops)]) -> Vec<i32> {
+    let mut bits = vec![];
+    for (reg, val) in nodes {
+        if reg.starts_with(prefix) {
+            match val {
+                D24Ops::VAL(v) => {
+                    let nodename = reg[1..].parse::<usize>().unwrap();
+                    if bits.len() <= nodename {
+                        bits.resize(nodename+1, 0);
+                    }
+                    bits[nodename] = *v;
+                }
+                _ => panic!("Expecting VAL, but got {:?}", val)
+            }   
+        }
+    }
+    bits
+}
+
+pub fn d24b(input: Vec<String>) -> String {
+    let (nodes, adjs, roots) = d24parse(input.clone());
+    let x = d24get("x", &nodes);
+    let y = d24get("y", &nodes);
+    println!("{}\n{}\n{:b}", 
+        x.into_iter().map(|s|s.to_string()).rev().collect::<String>(), 
+        y.into_iter().map(|s|s.to_string()).rev().collect::<String>(),
+        d24a(input).parse::<i64>().unwrap());
+    "".to_string()
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
