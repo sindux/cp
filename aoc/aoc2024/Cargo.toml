@@ -5,5 +5,9 @@ edition = "2021"
 
 [dependencies]
 plotters = "0.3.7"
+pyo3 = {"version" = "0.23.3", features = ["extension-module"] }
 rayon = "1.10.0"
 regex = "1.11.1"
+
+[lib]
+crate-type=["rlib", "cdylib"]

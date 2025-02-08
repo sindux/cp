@@ -1,6 +1,7 @@
 use std::{cmp::{Ordering, Reverse}, collections::{BinaryHeap, HashMap, HashSet, VecDeque}, fmt::Debug, fs, io::{self, BufRead}, str::FromStr};
 
 use plotters::{coord::Shift, prelude::*};
+use pyo3::prelude::*;
 use rayon::iter::{IntoParallelIterator, ParallelIterator};
 use regex::Regex;
 
@@ -1908,6 +1909,16 @@ pub fn d24b(input: Vec<String>) -> String {
         y.into_iter().map(|s|s.to_string()).rev().collect::<String>(),
         d24a(input).parse::<i64>().unwrap());
     "".to_string()
+}
+
+#[pyfunction]
+fn pyd24b(input: Vec<String>) -> String {
+    d24b(input)
+}
+
+#[pymodule]
+fn aoc2024(m: &Bound<'_, PyModule>) -> PyResult<()> {
+    m.add_function(wrap_pyfunction!(pyd24b, m)?)
 }
 
 #[cfg(test)]
