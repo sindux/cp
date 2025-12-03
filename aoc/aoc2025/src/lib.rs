@@ -173,3 +173,67 @@ pub fn d2b(input: Vec<String>) -> String {
         [rr.next().unwrap().parse::<i64>().unwrap(), rr.next().unwrap().parse().unwrap()]
     }).flat_map(|r| d2b_invalid(r[0], r[1])).sum::<i64>().to_string()
 }
+
+pub fn d3a(input: Vec<String>) -> String {
+    let mut ans = 0i32;
+    for pack in input {
+        let mut thisrow = 0;
+        let pack = pack.as_bytes();
+        for (i, ch) in pack.iter().enumerate() {
+            for (j, ch2) in pack.iter().enumerate() {
+                if i>=j {
+                    continue;
+                }
+                thisrow = thisrow.max(
+                    (ch - b'0') *10 + ch2 - b'0'
+                );
+            }
+        }
+        ans+=thisrow as i32;
+    }
+
+    ans.to_string()
+}
+
+fn d3b_go(pack: &[u8], idx: usize, pos: usize, memo: &mut [Vec<i64>]) -> i64 {
+    if idx>=pack.len() {
+        return 0;
+    }
+    // println!("idx: {idx} pos: {pos} len: {}", pack.len());
+
+    if memo[idx][pos]!=0 {
+        return memo[idx][pos];
+    }
+    // len: 5
+    // idx: 0 1 2 3 4
+    // pos:   3 2 1 0
+    if pos == 0 {
+        memo[idx][pos] = (pack[idx] as i64).max(d3b_go(pack, idx+1, pos, memo));
+        // println!("  1--> {}", memo[idx][pos]);
+        return memo[idx][pos];
+    }
+    if idx + 1 + pos == pack.len() {
+        if memo[idx][pos]!=0 {
+            return memo[idx][pos];
+        }
+        memo[idx][pos] = pack[idx] as i64 * 10_i64.pow(pos as u32) + d3b_go(pack, idx+1, pos-1, memo);
+        // println!("  2--> {}", memo[idx][pos]);
+        return memo[idx][pos];
+    }
+    memo[idx][pos] = d3b_go(pack, idx+1, pos, memo).max(
+        pack[idx] as i64 * 10_i64.pow(pos as u32) + d3b_go(pack, idx+1, pos-1, memo)
+    );
+    // println!("  3--> {}", memo[idx][pos]);
+    memo[idx][pos]
+}
+
+pub fn d3b(input: Vec<String>) -> String {
+    let mut ans = 0;
+    for pack in input {
+        let pack = pack.as_bytes();
+        let pack = pack.iter().map(|&b| b - b'0').collect::<Vec<u8>>();
+        let mut memo = vec![vec![0; 12]; pack.len()];
+        ans+=d3b_go(&pack, 0, 11, &mut memo);
+    }
+    ans.to_string()
+}
