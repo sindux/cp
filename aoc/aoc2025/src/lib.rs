@@ -97,14 +97,14 @@ fn d2a_invalid(start: i64, end: i64) -> Vec<i64> {
 
         let mut right = 0;
         let mut mult=1;
-        for k in 0..(digit_count/2) {
+        for _ in 0..(digit_count/2) {
             right = mult * (j%10) + right;
             mult *= 10;
             j/=10;
         }
         let mut left = 0;
         mult = 1;
-        for k in 0..(digit_count/2) {
+        for _ in 0..(digit_count/2) {
             left = mult * (j%10) + left;
             mult *= 10;
             j/=10;
@@ -137,7 +137,7 @@ fn d2b_invalid(start: i64, end: i64) -> Vec<i64> {
             for _ in 0..(digit_count/l) {
                 let mut cur = 0;
                 let mut mult = 1;
-                for k in 0..l {
+                for _ in 0..l {
                     cur = mult * (j%10) + cur;
                     mult *=10;
                     j/=10;
@@ -234,6 +234,65 @@ pub fn d3b(input: Vec<String>) -> String {
         let pack = pack.iter().map(|&b| b - b'0').collect::<Vec<u8>>();
         let mut memo = vec![vec![0; 12]; pack.len()];
         ans+=d3b_go(&pack, 0, 11, &mut memo);
+    }
+    ans.to_string()
+}
+
+fn d4_parse(line: Vec<String>) -> Vec<Vec<char>> {
+    let l = line[0].len();
+    let mut ans = vec![];
+    ans.push(vec!['.'; l+2]);
+    for l in line {
+        let mut row = vec!['.'];
+        row.extend(l.chars());
+        row.push('.');
+        ans.push(row);
+    }
+    ans.push(vec!['.'; l+2]);
+    ans
+}
+
+fn d4(input: &[Vec<char>]) -> Vec<(usize, usize)> {
+    let mut can_remove = vec![];
+    for y in 1..(input.len()-1) as isize {
+        for x in 1..(input[0].len()-1) as isize {
+            if input[y as usize][x as usize]!='@' {
+                continue;
+            }
+            let mut cnt = 0;
+            for dy in -1..=1isize {
+                for dx in -1..=1isize {
+                    if !(dy == 0 && dx == 0) && input[(y+dy) as usize][(x+dx) as usize]=='@' {
+                        cnt +=1;
+                    }
+                }
+            }
+            
+            if cnt < 4 {
+                can_remove.push((y as usize, x as usize));
+            }
+        }
+    }
+    can_remove
+}
+
+pub fn d4a(input: Vec<String>) -> String {
+    let input = d4_parse(input);
+    d4(&input).len().to_string()
+}
+
+pub fn d4b(input: Vec<String>) -> String {
+    let mut ans = 0;
+    let mut input = d4_parse(input);
+    loop {
+        let can_remove = d4(&input);
+        ans += can_remove.len();
+        for &(y, x) in &can_remove {
+            input[y][x] = '.';
+        }
+        if can_remove.is_empty() {
+            break;
+        }
     }
     ans.to_string()
 }
