@@ -296,3 +296,57 @@ pub fn d4b(input: Vec<String>) -> String {
     }
     ans.to_string()
 }
+
+fn d5a_parse(input: Vec<String>) -> (Vec<i64>, Vec<i64>, Vec<i64>) {
+    let mut ranges = vec![];
+    let mut queries = vec![];
+    let mut which = 0;
+    for i in input {
+        if i.is_empty() {
+            which = 1;
+            continue;
+        }
+        if which == 0 {
+            let mut rr = i.split('-');
+            let start = rr.next().unwrap().parse::<i64>().unwrap();
+            let end = rr.next().unwrap().parse::<i64>().unwrap();
+            ranges.push((start, end));
+        } else {
+            queries.push(i.parse::<i64>().unwrap());
+        }
+    }
+    ranges.sort_unstable();
+    (ranges.iter().map(|x|x.0).collect(),
+     ranges.iter().map(|x|x.1).collect(),
+     queries)
+}
+
+pub fn d5a(input: Vec<String>) -> String {
+    let (r_from, r_to, queries) = d5a_parse(input);
+    let mut ans = 0;
+    for q in queries {
+        for i in 0..r_from.len() {
+            if r_from[i]<=q && q<=r_to[i] {
+                ans+=1;
+                break;
+            }
+        }
+    }
+    ans.to_string()
+}
+
+pub fn d5b(input: Vec<String>) -> String {
+    // 357907198933888 too low
+    let (r_from, r_to, _) = d5a_parse(input);
+    let mut ans = 0;
+    let mut prev = 0;
+    for (from, to) in r_from.into_iter().zip(r_to.into_iter()) {
+        let mut add=0;
+        if to>=prev {
+            add = to - prev.max(from) + 1;
+            ans += add;
+            prev = prev.max(to) + 1;
+        }
+    }
+    ans.to_string()
+}
