@@ -350,3 +350,65 @@ pub fn d5b(input: Vec<String>) -> String {
     }
     ans.to_string()
 }
+
+fn d6a_parse(input: Vec<String>) -> (Vec<Vec<i64>>, Vec<char>) {
+    let nums: Vec<_> = input.iter().take(input.len()-1).map(|line| {
+        line.split_ascii_whitespace().map(|num| num.parse::<i64>().unwrap()).collect()
+    }).collect();
+    let chars: Vec<_> = input.last().unwrap().split_ascii_whitespace().map(|c| c.chars().next().unwrap()).collect();
+    (nums, chars)
+}
+
+pub fn d6a(input: Vec<String>) -> String {
+    let (nums, chars) = d6a_parse(input);
+    chars.into_iter().enumerate().fold(0, |acc, (i, c)| {
+        acc + nums.iter().skip(1).fold(nums[0][i], |colacc, nums| {
+            match c {
+                '+' => colacc + nums[i],
+                '*' => colacc * nums[i],
+                _ => unreachable!()
+            }
+        })
+    }).to_string()
+}
+
+fn d6b_parse(input: Vec<String>) -> (Vec<Vec<i64>>, Vec<char>) {
+    let mut idx = 0;
+    let mut ops:Vec<_> = input.last().unwrap().chars().collect();
+    ops.push(' ');
+    let mut nums = vec![];
+
+    let input = input.iter().take(input.len()-1).map(|line| line.as_bytes()).collect::<Vec<_>>();
+
+    while idx < ops.len() {
+        let startidx = idx;
+        idx += 1;
+        while idx < ops.len() && ops[idx].is_whitespace() {
+            idx += 1;
+        }
+        let mut colnums = vec![];
+        for x in startidx..idx-1 {
+            let mut num = String::with_capacity(input.len());
+            for y in 0..input.len() {
+                num.push(input[y][x] as char);
+            }
+            colnums.push(num.trim().parse().unwrap())
+        }
+        nums.push(colnums);
+    }
+    
+    (nums, ops.into_iter().filter(|&c|!c.is_whitespace()).collect())
+}
+
+pub fn d6b(input: Vec<String>) -> String {
+    let (nums, ops) = d6b_parse(input);
+
+    ops.into_iter().zip(nums.into_iter()).fold(0i64, |acc, (op, nums)| {
+        let val = match op {
+            '+' => nums.iter().sum::<i64>(),
+            '*' => nums.iter().product::<i64>(),
+            _ => unreachable!()
+        };
+        acc + val
+    }).to_string()
+}
