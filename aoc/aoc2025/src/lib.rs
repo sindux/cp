@@ -412,3 +412,53 @@ pub fn d6b(input: Vec<String>) -> String {
         acc + val
     }).to_string()
 }
+
+pub fn d7a(input: Vec<String>) -> String {
+    let w = input[0].len();
+    let input = vs2vvc(input);
+    let mut beams = HashSet::new();
+    beams.insert(input[0].iter().position(|n|n==&'S').unwrap());
+    let mut ans=0;
+    for y in &input[1..] {
+        let mut newbeams = HashSet::new();
+        for &x in &beams {
+            if y[x]=='^' {
+                ans+=1;
+                if x>0 {
+                    newbeams.insert(x-1);
+                }
+                if x+1<w {
+                    newbeams.insert(x+1);
+                }
+            } else {
+                newbeams.insert(x);
+            }
+        }
+        beams = newbeams;
+    }
+    ans.to_string()
+}
+
+pub fn d7b(input: Vec<String>) -> String {
+    let w = input[0].len();
+    let input = vs2vvc(input);
+    let mut beams = HashMap::new();
+    beams.insert(input[0].iter().position(|n|n==&'S').unwrap(), 1);
+    for y in &input[1..] {
+        let mut newbeams = HashMap::new();
+        for (&x, &cnt) in &beams {
+            if y[x]=='^' {
+                if x>0 {
+                    newbeams.entry(x-1).and_modify(|e| *e += cnt).or_insert(cnt);
+                }
+                if x+1<w {
+                    newbeams.entry(x+1).and_modify(|e| *e += cnt).or_insert(cnt);
+                }
+            } else {
+                newbeams.entry(x).and_modify(|e| *e += cnt).or_insert(cnt);
+            }
+        }
+        beams = newbeams;
+    }
+    beams.values().sum::<i64>().to_string()
+}
