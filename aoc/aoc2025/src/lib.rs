@@ -1,5 +1,6 @@
 use std::{cmp::{Ordering, Reverse}, collections::{BinaryHeap, HashMap, HashSet, VecDeque}, fmt::Debug, fs, io::{self, BufRead}, iter::FlatMap, str::FromStr};
-
+mod ds;
+use ds::UnionFind;
 
 pub fn read(f: String) -> Vec<String>
 {
@@ -461,4 +462,64 @@ pub fn d7b(input: Vec<String>) -> String {
         beams = newbeams;
     }
     beams.values().sum::<i64>().to_string()
+}
+
+fn d8_parse(input: Vec<String>) -> (Vec<(i32, i32, i32)>, BinaryHeap<(Reverse<i64>, usize, usize)>) {
+    let input: Vec<_> = input.into_iter().map(|line| {
+        let mut parts = line.split(',');
+        let x = parts.next().unwrap().parse::<i32>().unwrap();
+        let y = parts.next().unwrap().parse::<i32>().unwrap();
+        let z = parts.next().unwrap().parse::<i32>().unwrap();
+        (x, y, z)
+    }).collect();
+
+    let mut dists = BinaryHeap::new();
+    for (i, (x1, y1, z1)) in input.iter().enumerate() {
+        for (j, (x2, y2, z2)) in input.iter().skip(i+1).enumerate() {
+            let dist = ((x1 - x2) as i64).pow(2) + 
+                ((y1 - y2) as i64).pow(2) + 
+                ((z1 - z2) as i64).pow(2);
+            dists.push((Reverse(dist), i,j+i+1));
+        }
+    }
+
+    (input, dists)
+}
+
+pub fn d8a(input: Vec<String>) -> String {
+    let (input, mut dists) = d8_parse(input);
+
+    let max_iter = if input.len() < 100 { 10 } else { 1000 };
+    let mut uf = UnionFind::new(input.len());
+    let mut iter = 0;
+    while let Some((_, i, j)) = dists.pop() && iter < max_iter {
+        uf.union(i, j);
+        iter+=1;
+    }
+
+    let mut groups = HashMap::new();
+    for i in 0..input.len() {
+        let root = uf.find(i);
+        let size = uf.size(i);
+        groups.insert(root, size);
+    }
+
+    let mut groups: Vec<_> = groups.into_iter().map(|(root, cnt)| (cnt, root)).collect();
+    groups.sort_unstable();
+    groups.into_iter().rev().take(3).fold(1, |acc, (cnt, _)| acc * cnt).to_string()
+}
+
+pub fn d8b(input: Vec<String>) -> String {
+    let (input, mut dists) = d8_parse(input);
+
+    let max_iter = if input.len() < 100 { 10 } else { 1000 };
+    let mut uf = UnionFind::new(input.len());
+    let mut iter = 0;
+    while let Some((_, i, j)) = dists.pop() {
+        let p = uf.union(i, j);
+        if uf.size(p) == input.len() {
+            return (input[i].0 * input[j].0).to_string()
+        }
+    }
+    unreachable!()
 }
