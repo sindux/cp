@@ -1,4 +1,4 @@
-use std::{cmp::{Ordering, Reverse}, collections::{BinaryHeap, HashMap, HashSet, VecDeque}, fmt::Debug, fs, io::{self, BufRead}, iter::FlatMap, str::FromStr};
+use std::{cmp::{Ordering, Reverse}, collections::{BTreeSet, BinaryHeap, HashMap, HashSet, VecDeque}, fmt::Debug, fs, io::{self, BufRead}, iter::FlatMap, str::FromStr};
 mod ds;
 use ds::UnionFind;
 
@@ -39,8 +39,15 @@ fn vvc_find(grid: &[Vec<char>], what: char) -> (usize, usize) {
 fn vvc2str(grid: &[Vec<char>]) -> String {
     grid.iter().map(|l|l.iter().collect::<String>())
         .collect::<Vec<_>>().join("\n")
+}
+
+#[allow(dead_code)]
+fn vvu2str(grid: &[Vec<u8>]) -> String {
+    grid.iter().map(|l|l.iter().map(|&c|(c+b'0') as char).collect::<String>())
+        .collect::<Vec<_>>().join("\n")
 
 }
+
 
 #[allow(dead_code)]
 fn ss2vs(sliceofstr: &[&str]) -> Vec<String> {
@@ -522,4 +529,64 @@ pub fn d8b(input: Vec<String>) -> String {
         }
     }
     unreachable!()
+}
+
+fn d9_parse(input: Vec<String>) -> Vec<(i32, i32)> {
+    input.into_iter().map(|line| {
+        let mut line = line.split(',');
+        (line.next().unwrap().parse::<i32>().unwrap(), line.next().unwrap().parse::<i32>().unwrap())
+    }).collect()
+}
+
+pub fn d9a(input: Vec<String>) -> String {
+    let input: Vec<_> = d9_parse(input);
+    let mut ans = 0;
+    for (x1,y1) in &input {
+        for (x2, y2) in &input {
+            let area = ((x2 - x1).abs() + 1) as i64 * ((y2 - y1).abs() + 1) as i64;
+            ans = ans.max(area);
+        }
+    }
+    ans.to_string()
+}
+
+pub fn d9b(input: Vec<String>) -> String {
+    let input: Vec<_> = d9_parse(input);
+    
+    let mut xs: Vec<_> = input.iter().map(|(x,_)|*x).collect();
+    let mut ys: Vec<_> = input.iter().map(|(_,y)|*y).collect();
+    xs.sort_unstable();
+    ys.sort_unstable(); 
+    xs.dedup();
+    ys.dedup();
+
+    let xmap: HashMap<_,_> = xs.into_iter().enumerate().map(|(i, x)| (x, i)).collect();
+    let ymap: HashMap<_,_> = ys.into_iter().enumerate().map(|(i, y)| (y, i)).collect();
+
+    let mut grid = vec![vec![0u8; xmap.len()]; ymap.len()];
+
+    fn drawto(grid: &mut Vec<Vec<u8>>, prev: (usize, usize), to: (usize, usize)) {
+        let (dy,dx) = (to.0 as isize - prev.0 as isize, to.1 as isize - prev.1 as isize);
+        assert!(dy == 0 || dx == 0);
+        for step in 1..=dy.abs().max(dx.abs()) {
+            let ny = (prev.0 as isize + dy.signum() * step) as usize;
+            let nx = (prev.1 as isize + dx.signum() * step) as usize;
+            grid[ny][nx] = 1;
+        }
+    }
+
+    let mut prev=(0,0);
+    for (x, y) in &input {
+        let xi = xmap[x];
+        let yi = ymap[y];
+        if prev != (0, 0) {
+            drawto(&mut grid, prev, (yi, xi));
+        } else {
+            grid[yi][xi] = 1;
+        }
+        prev = (yi, xi);
+    }
+    //drawto(&mut grid, prev, (xmap[&0], ymap[&0]));
+    println!("{}", vvu2str(&grid));
+    "".to_string()
 }
