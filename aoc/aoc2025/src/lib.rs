@@ -1,4 +1,5 @@
 use std::{cmp::{Ordering, Reverse}, collections::{BTreeSet, BinaryHeap, HashMap, HashSet, VecDeque}, fmt::Debug, fs, io::{self, BufRead}, iter::FlatMap, str::FromStr};
+use regex::Regex;   
 mod ds;
 use ds::UnionFind;
 
@@ -589,4 +590,91 @@ pub fn d9b(input: Vec<String>) -> String {
     //drawto(&mut grid, prev, (xmap[&0], ymap[&0]));
     println!("{}", vvu2str(&grid));
     "".to_string()
+}
+
+fn d10_parse(input: Vec<String>) -> Vec<(i32, usize, Vec<i32>, Vec<Vec<usize>>, Vec<i32>)> {
+    let re = Regex::new(r"\[([.#]+)\] ([^{]+) \{(.+)\}").unwrap();
+    let btn = Regex::new(r"\(([\d,]+)\)").unwrap();
+    input.into_iter().map(|line|  {
+        // [.##.] (3) (1,3) (2) (2,3) (0,2) (0,1) {3,5,4,7}
+        let caps = re.captures(&line).unwrap();
+        
+        let light = &caps[1];
+        let length = light.len();
+        let light = light.chars().rev().fold(0, |acc, c| acc*2 + if c=='.' {0} else {1});
+
+        let buttons = &caps[2];
+        let buttons = btn.captures_iter(buttons)
+            .map(|bcap| bcap[1].split(',').map(|s| s.parse::<usize>().unwrap()).collect::<Vec<_>>())
+            .collect::<Vec<_>>();
+        let buttonsmask = buttons.iter().map(|bs| {
+            bs.iter().fold(0, |acc, &btn| acc | (1 << btn))
+        }).collect::<Vec<_>>();
+
+        let volts = &caps[3];
+        let volts = volts.split(',').map(|s| s.parse::<i32>().unwrap()).collect();
+
+        println!("light: {} length: {} buttons: {:?} buttonsmask: {:?} volts: {:?}", light, length, buttons, buttonsmask, volts);
+        (light, length, buttonsmask, buttons, volts)
+    }).collect()
+}
+
+pub fn d10a(input: Vec<String>) -> String {
+    let input = d10_parse(input);
+    let mut ans = 0;
+    for (light, _, buttons, _, _) in input {
+        let mut q = BinaryHeap::new();
+        q.push((Reverse(0), 0));
+        let mut best: HashMap<i32, i32> = HashMap::new();
+        best.insert(0, 0);
+        while let Some((Reverse(steps), state)) = q.pop() {
+            if state == light {
+                ans += steps;
+                break;
+            }
+
+            for &btn in &buttons {
+                let newstate = state ^ btn;
+                if !best.contains_key(&newstate) || best[&newstate]>steps+1 {
+                    q.push((Reverse(steps+1), newstate));
+                    best.insert(newstate, steps+1);
+                }
+            }
+        }
+        // println!("light: {:05b} steps: {}", light, ans);
+    }
+    ans.to_string()
+}
+
+pub fn d10b(input: Vec<String>) -> String {
+    let input = d10_parse(input);
+    let mut ans = 0;
+    for (_, length, _, buttons, volts) in input {
+        let mut q = BinaryHeap::new();
+        q.push((Reverse(0), vec![0; length]));
+        while let Some((Reverse(steps), state)) = q.pop() {
+            if state == volts {
+                ans += steps;
+                break;
+            }
+
+            for btns in &buttons {
+                let mut newstate = state.clone();
+                let mut ok = true;
+                for &b in btns {
+                    newstate[b] += 1;
+                    if newstate[b] > volts[b] {
+                        ok = false;
+                        break;
+                    }
+                }
+                println!("  state: {:?} btns: {:?} -> newstate: {:?} ok: {}", state, btns, newstate, ok);
+                if ok {
+                    q.push((Reverse(steps+1), newstate));
+                }
+            }
+        }
+        println!("volts: {:?} steps: {}", volts, ans);
+    }
+    ans.to_string()
 }
