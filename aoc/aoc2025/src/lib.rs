@@ -678,3 +678,79 @@ pub fn d10b(input: Vec<String>) -> String {
     }
     ans.to_string()
 }
+
+fn d11_parse(input: &Vec<String>) -> (HashMap<&str, usize>, HashMap<usize, Vec<usize>>) {
+    let mut tos: HashMap<usize, Vec<usize>> = HashMap::new();
+
+    let mut id: HashMap<&str, usize> = HashMap::new();
+
+    for i in input {
+        let mut ft = i.split(": ");
+        let f = ft.next().unwrap();
+        let t = ft.next().unwrap();
+
+        let nextid = id.len();
+        let fid = id.entry(f).or_insert(nextid).clone();
+
+        for to in t.split_ascii_whitespace() {
+            let nextid = id.len();
+            let tid = id.entry(to).or_insert(nextid).clone();
+            tos.entry(fid).or_insert(vec![]).push(tid);
+        }
+    }
+    (id, tos)
+}
+
+pub fn d11a(input: Vec<String>) -> String {
+    let (ids, tos) = d11_parse(&input);
+    fn dfs(tos: &HashMap<usize, Vec<usize>>, cur: usize, to: usize) -> i32 {
+        if cur == to { return 1 }
+        let mut ans = 0;
+        if let Some(tos_) = tos.get(&cur) {
+            for &t in tos_ {
+                ans+=dfs(tos, t, to)
+            }
+        }
+        // println!("from: {cur} to: {to} ans: {ans}");
+        ans
+    }
+    dfs(&tos, ids.get(&"you").unwrap().clone(), ids.get(&"out").unwrap().clone()).to_string()
+}
+
+pub fn d11b(input: Vec<String>) -> String {
+    // 1650109440 too low
+    let (ids, tos) = d11_parse(&input);
+    fn dfs(tos: &HashMap<usize, Vec<usize>>, visited: &mut HashSet<(usize, bool, bool)>, cache: &mut HashMap<(usize, bool, bool), i64>, cur: usize, to: usize, dac: usize, fft: usize, dac_passed: bool, fft_passed: bool) -> i64 {
+        if cur == to { 
+            // if dac_passed && fft_passed {
+            //     println!("dac {dac_passed} fft {fft_passed}");
+            // }
+            return if dac_passed && fft_passed {1} else {0} 
+        }
+        // if visited.contains(&(cur, dac_passed, fft_passed)) { 
+        //     println!("visited: {cur}");
+        //     return 0; 
+        // }
+        // visited.insert((cur, dac_passed, fft_passed));
+
+        let mut ans = 0;
+        let d_pass = dac_passed || cur == dac;
+        let f_pass = fft_passed || cur == fft;
+        if let Some(v) = cache.get(&(cur, dac_passed, fft_passed)) {
+            return *v;
+        }
+
+        if let Some(tos_) = tos.get(&cur) {
+            for &t in tos_ {
+                ans += dfs(tos, visited, cache, t, to, dac, fft, d_pass, f_pass);
+            }
+        }
+        // println!("from: {cur} to: {to} ans: {ans} dac:{d_pass} fft:{f_pass}");
+        // visited.remove(&(cur, dac_passed, fft_passed));
+        cache.insert((cur, d_pass, f_pass), ans);
+        ans
+    }
+    // println!("{ids:#?}");
+    dfs(&tos,   &mut HashSet::new(), &mut HashMap::new(), ids.get(&"svr").unwrap().clone(), ids.get(&"out").unwrap().clone(), 
+        ids.get(&"dac").unwrap().clone(), ids.get(&"fft").unwrap().clone(), false, false).to_string()
+}
