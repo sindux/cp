@@ -532,20 +532,22 @@ pub fn d8b(input: Vec<String>) -> String {
     unreachable!()
 }
 
-fn d9_parse(input: Vec<String>) -> Vec<(i32, i32)> {
+fn d9_parse(input: Vec<String>) -> Vec<(usize, usize)> {
     input.into_iter().map(|line| {
         let mut line = line.split(',');
-        (line.next().unwrap().parse::<i32>().unwrap(), line.next().unwrap().parse::<i32>().unwrap())
+        (line.next().unwrap().parse::<usize>().unwrap(), line.next().unwrap().parse::<usize>().unwrap())
     }).collect()
 }
 
 pub fn d9a(input: Vec<String>) -> String {
     let input: Vec<_> = d9_parse(input);
     let mut ans = 0;
-    for (x1,y1) in &input {
-        for (x2, y2) in &input {
-            let area = ((x2 - x1).abs() + 1) as i64 * ((y2 - y1).abs() + 1) as i64;
-            ans = ans.max(area);
+    for &(x1,y1) in &input {
+        for &(x2, y2) in &input {
+            if x2 > x1 {
+                let area = ((x2 - x1) + 1) as i64 * ((y2 as i64 - y1 as i64).abs() + 1);
+                ans = ans.max(area);
+            }
         }
     }
     ans.to_string()
@@ -561,10 +563,10 @@ pub fn d9b(input: Vec<String>) -> String {
     xs.dedup();
     ys.dedup();
 
-    let xmap: HashMap<_,_> = xs.into_iter().enumerate().map(|(i, x)| (x, i)).collect();
-    let ymap: HashMap<_,_> = ys.into_iter().enumerate().map(|(i, y)| (y, i)).collect();
+    let xmap: HashMap<_,_> = xs.into_iter().enumerate().map(|(i, x)| (x, i*2)).collect();
+    let ymap: HashMap<_,_> = ys.into_iter().enumerate().map(|(i, y)| (y, i*2)).collect();
 
-    let mut grid = vec![vec![0u8; xmap.len()]; ymap.len()];
+    let mut grid = vec![vec![0u8; xmap.len()*2]; ymap.len()*2];
 
     fn drawto(grid: &mut Vec<Vec<u8>>, prev: (usize, usize), to: (usize, usize)) {
         let (dy,dx) = (to.0 as isize - prev.0 as isize, to.1 as isize - prev.1 as isize);
@@ -587,9 +589,62 @@ pub fn d9b(input: Vec<String>) -> String {
         }
         prev = (yi, xi);
     }
-    //drawto(&mut grid, prev, (xmap[&0], ymap[&0]));
+
+    drawto(&mut grid, prev, (ymap[&input[0].1], xmap[&input[0].0]));
+    
+    fn fill(grid: &mut Vec<Vec<u8>>) {
+        let mut start = (0,0);
+        'y: for y in grid.iter().skip(1).enumerate() { // asume line 0 has horz only
+            for x in 0..y.1.len()-1 {
+                if y.1[x]==1 && y.1[x+1]==0 {
+                    start = (y.0+1,x+1);
+                    break 'y;
+                }
+            }
+        }
+        println!("{start:?}");
+        let mut q = VecDeque::new();
+        q.push_back(start);
+        grid[start.1][start.0]=1;
+        while let Some((y, x)) = q.pop_front() {
+            for (dy,dx) in [(0,1), (0,-1), (1,0), (-1,0)] {
+                let ny = y as isize + dy;
+                let nx = x as isize + dx;
+                if 0<=ny && ny<grid.len() as isize && 0<=nx && nx<grid[0].len() as isize && grid[ny as usize][nx as usize]==0 {
+                    grid[ny as usize][nx as usize]=1;
+                    q.push_back((ny as usize, nx as usize));
+                }
+            }
+        }
+    }
+    fill(&mut grid);
+
     println!("{}", vvu2str(&grid));
-    "".to_string()
+
+    let mut ans = 0;
+    for &(x1,y1) in &input {
+        let mx1 = xmap[&x1];
+        let my1 = ymap[&y1];
+        for &(x2, y2) in &input {
+            let mx2 = xmap[&x2];
+            let my2 = ymap[&y2];
+            if x2>=x1 {
+                let mut hashole = false;
+                'y: for y in my1.min(my2)..=my1.max(my2) {
+                    for x in mx1..=mx2 {
+                        if grid[y][x]!=1 { hashole=true; break 'y; }
+                    }
+                }
+                if !hashole {
+                    let area = ((x2 - x1) + 1) as i64 * ((y2 as i64 - y1 as i64).abs() + 1);
+                    ans = ans.max(area);
+                    // println!("    x1: {x1} y1: {y1} x2: {x2} y2: {y2} area: {area}");
+                }
+            }
+        }
+    }
+
+    ans.to_string()
 }
 
 fn d10_parse(input: Vec<String>) -> Vec<(i32, usize, Vec<i32>, Vec<Vec<usize>>, Vec<i32>)> {
@@ -753,4 +808,106 @@ pub fn d11b(input: Vec<String>) -> String {
     // println!("{ids:#?}");
     dfs(&tos,   &mut HashSet::new(), &mut HashMap::new(), ids.get(&"svr").unwrap().clone(), ids.get(&"out").unwrap().clone(), 
         ids.get(&"dac").unwrap().clone(), ids.get(&"fft").unwrap().clone(), false, false).to_string()
+}
+
+fn d12_parse(input: Vec<String>) -> (Vec<Vec<Vec<u8>>>, Vec<(usize, usize, Vec<usize>)>) {
+    let mut shapes = vec![];
+    let mut regions = vec![];
+
+    input.chunk_by(|a,b| !a.is_empty() && !b.is_empty()).for_each(|chunk| {
+        if chunk.len()>1 {
+            if chunk[0].ends_with(':') {   // shape
+                let shape = chunk[1..].iter().map(|c|
+                    c.as_bytes().iter().map(|&ch|if ch == b'.' {0u8} else {1u8}).collect::<Vec<_>>()).collect::<Vec<_>>();
+                shapes.push(shape);
+            } else {
+                for region in chunk {
+                    let mut size_reqs = region.split(": ");
+                    let size = size_reqs.next().unwrap();
+                    let reqs = size_reqs.next().unwrap();
+
+                    let xy = size.split('x').map(|c|c.parse::<usize>().unwrap()).collect::<Vec<_>>();
+                    let reqs = reqs.split_ascii_whitespace().map(|c|c.parse::<usize>().unwrap()).collect::<Vec<_>>();
+                    
+                    regions.push((xy[1], xy[0], reqs));
+                }
+            }
+        }
+    });
+    (shapes, regions)
+
+}
+
+fn d12_buildshapes(shapes: Vec<Vec<Vec<u8>>>) -> Vec<Vec<Vec<Vec<u8>>>>{
+    fn rotate_flip(mut shape: Vec<Vec<u8>>) -> Vec<Vec<Vec<u8>>>{
+        let mut ans = vec![];
+
+        for flip in 0..2 {
+            if flip > 0 {
+                let mut flippvert = vec![];
+                for row in &shape {
+                    flippvert.push(row.iter().cloned().rev().collect::<Vec<_>>());
+                }
+                shape = flippvert;
+            }
+            for rotate in 0..4 {
+                if rotate > 0 {
+                    let mut rotright = vec![];
+                    for x in 0..shape[0].len() {
+                        let mut row = vec![];
+                        for y in (0..shape.len()).rev() {
+                            row.push(shape[y][x]);
+                        }
+                        rotright.push(row);
+                    }
+                    shape = rotright;
+                }
+                ans.push(shape.clone())
+            }
+        }
+        ans
+    }
+    let mut allshapes = vec![];
+    for shape in shapes {
+        let shape = rotate_flip(shape);
+        allshapes.push(shape);
+    }
+    allshapes
+}
+
+pub fn d12a(input: Vec<String>) -> String {
+    let (shapes, regions) = d12_parse(input);
+    let shapes = d12_buildshapes(shapes);
+    println!("{shapes:?}");
+
+    for region in regions {
+        println!("{region:?}");
+        let (y, x, reqs) = region;
+        let mut grid = vec![vec![0u8; x]; y];
+        
+        fn go(grid: &mut Vec<Vec<u8>>, shapes: &Vec<Vec<Vec<Vec<u8>>>>, h: usize, w: usize, cnts: &Vec<usize>, cntidx: usize, cntidxplaced: usize) -> bool {
+            if cntidx >= cnts.len() {
+                return true
+            }
+
+            let toplace_shapes = &shapes[cntidx];
+            let toplace_cnt = cnts[cntidx];
+
+            for toplace_shape in toplace_shapes {
+
+                go(grid, shapes, h, w, cnts, if cntidxplaced+1>=toplace_cnt {cntidx+1} else {cntidx}, if cntidxplaced+1>=toplace_cnt {0} else {cntidxplaced+1});
+            }
+
+            true
+        }
+
+        go(&mut grid, &shapes, y, x, &reqs, 0, 0);
+        
+    }
+    
+    "".to_string()
+}
+
+pub fn d12b(input: Vec<String>) -> String {
+    "".to_string()
 }
